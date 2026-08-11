@@ -51,7 +51,7 @@ public static class SmartCollector
                 entry.PowerOnHours = rel.PowerOnHours;
                 entry.WearLevel = rel.Wear;
                 entry.Temperature = rel.Temperature;
-                entry.PartialData = rel.Partial || entry.PartialData;
+                entry.PartialData = rel.Partial || entry.PartialData == true;
                 if (entry.HealthStatus is null or "Unknown" && rel.HealthStatus is not null)
                 {
                     entry.HealthStatus = rel.HealthStatus;
