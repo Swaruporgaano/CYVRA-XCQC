@@ -1,8 +1,8 @@
 [build]
-  base = "apps/web"
-  command = "npm install --prefix ../.. && npm run build -w @cyvra/xcqc-shared && npm run build -w @cyvra/xcqc-web"
-  publish = "dist"
-  # Note: adjust when Netlify site is created. Prefer installing from monorepo root.
+  # Monorepo: install and workspace builds must run from repo root (-w requires root package.json).
+  base = "."
+  command = "npm install && npm run build -w @cyvra/xcqc-shared && npm run build -w @cyvra/xcqc-web"
+  publish = "apps/web/dist"
 
 [build.environment]
   NODE_VERSION = "20"

@@ -59,6 +59,12 @@ npm install
 npm start
 ```
 
+## Plan 3 — Deploy (recommended)
+
+Fix Codespace `/health` first, then cloud in order: **Neon → Render → Netlify → Windows agent**.
+
+Full step-by-step: [`docs/DEPLOY-RENDER-NEON-NETLIFY.md`](docs/DEPLOY-RENDER-NEON-NETLIFY.md)
+
 ## Neon / Netlify
 
 - **Neon:** optional durable storage — [`docs/NEON-SETUP.md`](docs/NEON-SETUP.md). Schema: `apps/api/sql/neon-schema.sql`.
@@ -66,6 +72,7 @@ npm start
 
 ## Docs
 
+- [`docs/DEPLOY-RENDER-NEON-NETLIFY.md`](docs/DEPLOY-RENDER-NEON-NETLIFY.md) — **Plan 3** deploy runbook
 - [`docs/CODESPACE-RUN.md`](docs/CODESPACE-RUN.md)
 - [`docs/NEON-SETUP.md`](docs/NEON-SETUP.md)
 
