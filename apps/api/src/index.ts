@@ -2,12 +2,13 @@ import cors from "cors";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
 import { createSeedState } from "./store/appState.js";
-import { createSessionStore } from "./store/neon.js";
+import { createSessionStore, getPgPool, isNeonConfigured } from "./store/neon.js";
 import { createSessionRouter } from "./routes/sessions.js";
 import { createAuthRouter } from "./routes/auth.js";
 import { createTenantsRouter } from "./routes/tenants.js";
 import { createLicensesRouter } from "./routes/licenses.js";
 import { createCertificatesRouter } from "./routes/certificates.js";
+import { createV1AuthStubRouter } from "./routes/v1-auth-stub.js";
 
 function ingestAuth(req: Request, res: Response, next: NextFunction): void {
   const expected = process.env.XCQC_INGEST_TOKEN;
@@ -33,15 +34,31 @@ export async function createApp() {
   app.use(cors());
   app.use(express.json({ limit: "5mb" }));
 
-  app.get("/health", (_req, res) => {
+  app.get("/health", async (_req, res) => {
+    const neonConfigured = isNeonConfigured();
+    let neonReachable = false;
+    if (neonConfigured) {
+      try {
+        const pool = getPgPool();
+        if (pool) {
+          await pool.query("SELECT 1");
+          neonReachable = true;
+        }
+      } catch {
+        neonReachable = false;
+      }
+    }
+
     res.json({
       ok: true,
       service: "xcqc-api",
       product: "CYVRA XCQC",
       time: new Date().toISOString(),
       store: mode,
-      neonConfigured: Boolean(process.env.DATABASE_URL),
+      neonConfigured,
+      neonReachable,
       ingestAuth: Boolean(process.env.XCQC_INGEST_TOKEN),
+      phase: "P0",
     });
   });
 
@@ -50,6 +67,7 @@ export async function createApp() {
       product: "CYVRA XCQC",
       message: "Agents collect. API is truth. Web is windows onto truth.",
       store: mode,
+      docs: "docs/FREEZE-STATUS.md",
       endpoints: [
         "GET /health",
         "POST /auth/login",
@@ -66,6 +84,7 @@ export async function createApp() {
         "POST /sessions/:sessionId/finalize",
         "GET /certificates",
         "GET /certificates/:certificateId",
+        "GET /api/v1 (stub — L2)",
       ],
     });
   });
@@ -75,6 +94,7 @@ export async function createApp() {
   app.use("/licenses", createLicensesRouter(state));
   app.use("/sessions", ingestAuth, createSessionRouter(store));
   app.use("/certificates", createCertificatesRouter(store, state));
+  app.use("/api/v1", createV1AuthStubRouter());
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err);

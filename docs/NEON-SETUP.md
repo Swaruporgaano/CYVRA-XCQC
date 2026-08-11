@@ -14,13 +14,21 @@ Neon is **optional**. The API runs fine with in-memory or file storage for local
 
 ## 2. Apply schema
 
+**Apply order (do not skip step 1):**
+
+| Step | File | Phase |
+|------|------|-------|
+| 1 | `apps/api/sql/neon-schema.sql` | P0 — sessions, tenants, ingest |
+| 2 | `apps/api/sql/neon-schema-l1-commercial.sql` | L1 — customers, licenses, devices |
+
 From the repo root (with `psql` or Neon SQL Editor):
 
 ```bash
 psql "$DATABASE_URL" -f apps/api/sql/neon-schema.sql
+psql "$DATABASE_URL" -f apps/api/sql/neon-schema-l1-commercial.sql
 ```
 
-Or paste the contents of `apps/api/sql/neon-schema.sql` into the Neon **SQL Editor** and run.
+Or paste each file into the Neon **SQL Editor** and run in order.
 
 ## 3. Configure the API
 
@@ -48,7 +56,7 @@ Restart the API and verify:
 
 ```bash
 curl http://127.0.0.1:8080/health
-# "store": "neon", "neonConfigured": true
+# "store": "neon", "neonConfigured": true, "neonReachable": true
 ```
 
 ## 4. What gets persisted
@@ -62,7 +70,9 @@ curl http://127.0.0.1:8080/health
 | `tenants`, `users`, `license_pools` | Admin seed data (manual / future sync) |
 | `device_baselines` | Wave C composition baselines (schema ready) |
 
-Tenant/user/license admin routes still use in-memory seed state until a later wave wires Prisma/Drizzle migrations for admin tables.
+**L1 commercial tables** (after `neon-schema-l1-commercial.sql`): `customers`, `otp_transactions`, `license_keys`, `download_tokens`, `devices`, `agent_activations`, `device_scans`, `device_components`, `audit_logs`. See [`FREEZE-STATUS.md`](./FREEZE-STATUS.md).
+
+Tenant/user/license admin routes still use in-memory seed state until a later wave wires admin tables to Neon.
 
 ## Troubleshooting
 

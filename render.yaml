@@ -1,6 +1,6 @@
-# CYVRA XCQC — Render Blueprint stub
-# Reuse existing Render project; connect this repo and deploy apps/api.
-# Neon DATABASE_URL is intentionally omitted until durable store is required.
+# CYVRA XCQC — Render Blueprint
+# P0: set DATABASE_URL (Neon pooled) + XCQC_INGEST_TOKEN in Render dashboard.
+# See docs/P0-VERIFICATION-CHECKLIST.md
 
 services:
   - type: web
@@ -18,10 +18,15 @@ services:
         value: production
       - key: PORT
         value: "10000"
-      - key: XCQC_STORE
-        value: memory
       - key: XCQC_INGEST_TOKEN
         sync: false
-      # Add DATABASE_URL from Neon only when switching off in-memory MVP store
-      # - key: DATABASE_URL
-      #   sync: false
+      # P0 — Neon pooled connection string (Neon takes precedence over XCQC_STORE)
+      - key: DATABASE_URL
+        sync: false
+      # L2+ — generate in dashboard; see .env.example
+      - key: JWT_SECRET
+        sync: false
+      - key: OTP_PEPPER
+        sync: false
+      - key: LICENSE_PEPPER
+        sync: false
