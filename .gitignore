@@ -1,0 +1,33 @@
+node_modules/
+dist/
+build/
+.bin/
+*.log
+.env
+.env.local
+.DS_Store
+Thumbs.db
+
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+
+# Agent local evidence
+**/evidence/
+**/out/
+
+# Office lock / temp extracts
+~$*
+_docx_text.txt
+_docx_extract/
+
+# IDE
+.idea/
+*.swp
+
+# Local archive (use .devcontainer/)
+.devcontainer.zip
+

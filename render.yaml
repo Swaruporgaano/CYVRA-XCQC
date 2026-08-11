@@ -1,0 +1,25 @@
+# CYVRA XCQC — Render Blueprint stub
+# Reuse existing Render project; connect this repo and deploy apps/api.
+# Neon DATABASE_URL is intentionally omitted until durable store is required.
+
+services:
+  - type: web
+    name: xcqc-api
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: npm install && npm run build -w @cyvra/xcqc-shared && npm run build -w @cyvra/xcqc-api
+    startCommand: npm run start -w @cyvra/xcqc-api
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: XCQC_STORE
+        value: memory
+      - key: XCQC_INGEST_TOKEN
+        sync: false
+      # Add DATABASE_URL from Neon only when switching off in-memory MVP store
+      # - key: DATABASE_URL
+      #   sync: false

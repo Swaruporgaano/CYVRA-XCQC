@@ -1,0 +1,24 @@
+{
+  "name": "cyvra-xcqc",
+  "private": true,
+  "version": "0.1.0",
+  "description": "CYVRA XCQC — on-device diagnostic agents + cloud control plane",
+  "workspaces": [
+    "apps/api",
+    "apps/web",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w @cyvra/xcqc-api",
+    "dev:web": "npm run dev -w @cyvra/xcqc-web",
+    "build:api": "npm run build -w @cyvra/xcqc-api",
+    "build:web": "npm run build -w @cyvra/xcqc-web",
+    "build:shared": "npm run build -w @cyvra/xcqc-shared",
+    "build": "npm run build:shared && npm run build:api && npm run build:web",
+    "start:api": "npm run start -w @cyvra/xcqc-api",
+    "typecheck": "npm run typecheck -w @cyvra/xcqc-shared && npm run typecheck -w @cyvra/xcqc-api && npm run typecheck -w @cyvra/xcqc-web"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

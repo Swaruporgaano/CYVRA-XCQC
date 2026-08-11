@@ -1,0 +1,15 @@
+[build]
+  base = "apps/web"
+  command = "npm install --prefix ../.. && npm run build -w @cyvra/xcqc-shared && npm run build -w @cyvra/xcqc-web"
+  publish = "dist"
+  # Note: adjust when Netlify site is created. Prefer installing from monorepo root.
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Set VITE_API_URL to https://<your-render-api>.onrender.com in Netlify env.

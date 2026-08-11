@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    />
+    <title>CYVRA XCQC Operator</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>CYVRA <em>XCQC</em></h1>
+      <p>Electron shell drives the <strong>native</strong> Wave A agent — collectors stay in .NET/WMI.</p>
+    </header>
+
+    <section class="panel">
+      <h2>Pre-flight</h2>
+      <p id="agentPath">Resolving agent…</p>
+      <label>API base <input id="api" value="http://127.0.0.1:8080" /></label>
+      <label>Ingest token <input id="token" value="dev-ingest-token" /></label>
+      <label class="check"><input id="offline" type="checkbox" /> Offline only (local JSON)</label>
+      <div class="row">
+        <button id="run">Run Wave A inventory</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Progress / log</h2>
+      <pre id="log">Ready.</pre>
+    </section>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
