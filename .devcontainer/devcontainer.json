@@ -2,8 +2,8 @@
   "name": "CYVRA XCQC",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
   "features": {},
-  "postCreateCommand": "npm install && npm run build -w @cyvra/xcqc-shared",
-  "forwardPorts": [8080],
+  "postCreateCommand": "npm run install:all",
+  "forwardPorts": [8080, 5173],
   "customizations": {
     "vscode": {
       "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]

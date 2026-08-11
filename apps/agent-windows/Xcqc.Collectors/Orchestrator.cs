@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
+using Xcqc.Collectors.Health;
 using Xcqc.Collectors.Inventory;
 using Xcqc.Collectors.Preflight;
 using Xcqc.Collectors.Transport;
@@ -22,16 +22,20 @@ public sealed class OrchestratorOptions
 }
 
 [SupportedOSPlatform("windows")]
-public static class WaveAOrchestrator
+public static class XcqcOrchestrator
 {
-    public const string AgentVersion = "0.1.0-waveA";
+    public const string AgentVersion = "0.2.0-waveB";
 
-    public static async Task<int> RunAsync(OrchestratorOptions opt, CancellationToken ct = default)
+    public static Task<int> RunAsync(OrchestratorOptions opt, CancellationToken ct = default) =>
+        RunWaveABAsync(opt, ct);
+
+    public static async Task<int> RunWaveABAsync(OrchestratorOptions opt, CancellationToken ct = default)
     {
-        Console.WriteLine("=== CYVRA XCQC Windows Agent — Wave A (Inventory) ===");
+        Console.WriteLine("=== CYVRA XCQC Windows Agent — Wave A+B ===");
         Console.WriteLine($"AgentVersion={AgentVersion}");
         Console.WriteLine($"API={opt.ApiBaseUrl} OfflineOnly={opt.OfflineOnly}");
 
+        var elevated = PreflightRunner.IsElevated();
         var (checks, missing, canContinue) = PreflightRunner.Run();
         Console.WriteLine("-- Pre-flight --");
         foreach (var c in checks)
@@ -76,12 +80,12 @@ public static class WaveAOrchestrator
                 await client.PostEventAsync(sessionId, new
                 {
                     type = "preflight.completed",
-                    message = "Wave A pre-flight completed",
+                    message = "Wave A+B pre-flight completed",
                     data = new
                     {
                         checkCount = checks.Count,
                         missingCount = missing.Count,
-                        elevated = PreflightRunner.IsElevated(),
+                        elevated,
                     },
                 }, ct);
             }
@@ -99,105 +103,100 @@ public static class WaveAOrchestrator
             Console.WriteLine($"Offline session id: {sessionId}");
         }
 
-        var module = new ModuleResult
-        {
-            ModuleId = "inventory",
-            Wave = "A",
-            Status = "running",
-            StartedAt = DateTime.UtcNow.ToString("o"),
-        };
+        var modules = new List<ModuleResult>();
 
-        if (client is not null)
-        {
-            await client.PostEventAsync(sessionId, new
+        var invRun = await RunModuleAsync(
+            client, sessionId, "inventory", "A", ct,
+            onCollect: q =>
             {
-                type = "module.started",
-                moduleId = "inventory",
-                percent = 0,
-                message = "Wave A inventory started",
-            }, ct);
-        }
-
-        var progressQueue = new ConcurrentQueue<(string Step, int Pct)>();
-        InventorySection inventory;
-        try
-        {
-            inventory = InventoryCollector.Collect((step, pct) =>
-            {
-                Console.WriteLine($"  inventory:{step} {pct}%");
-                progressQueue.Enqueue((step, pct));
+                var inv = InventoryCollector.Collect((step, pct) =>
+                {
+                    Console.WriteLine($"  inventory:{step} {pct}%");
+                    q.Enqueue((step, pct));
+                });
+                return (
+                    inv,
+                    $"Collected RAM={inv.RamModules.Count} disks={inv.Disks.Count}",
+                    new[] { "baseboardSerial", "chassisSerial", "ramSerials", "diskSerials", "tpm" });
             });
-        }
-        catch (Exception ex)
+        modules.Add(invRun.Module);
+        if (invRun.Failed)
         {
-            module.Status = "failed";
-            module.FinishedAt = DateTime.UtcNow.ToString("o");
-            module.Message = ex.Message;
-            Console.Error.WriteLine($"Inventory failed: {ex}");
-            if (client is not null)
-            {
-                await client.PostEventAsync(sessionId, new
-                {
-                    type = "module.failed",
-                    moduleId = "inventory",
-                    message = ex.Message,
-                }, ct);
-            }
             client?.Dispose();
-            return 4;
+            return invRun.ExitCode;
         }
-
-        if (client is not null)
-        {
-            while (progressQueue.TryDequeue(out var p))
-            {
-                try
-                {
-                    await client.PostEventAsync(sessionId, new
-                    {
-                        type = "module.progress",
-                        moduleId = "inventory",
-                        percent = p.Pct,
-                        message = p.Step,
-                    }, ct);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"  (progress upload warn: {ex.Message})");
-                }
-            }
-        }
-
-        module.Status = "ok";
-        module.FinishedAt = DateTime.UtcNow.ToString("o");
-        module.Message = $"Collected RAM={inventory.RamModules.Count} disks={inventory.Disks.Count}";
-        module.EvidenceKeys =
-        [
-            "baseboardSerial", "chassisSerial", "ramSerials", "diskSerials", "tpm",
-        ];
-
-        if (client is not null)
-        {
-            await client.PostEventAsync(sessionId, new
-            {
-                type = "module.finished",
-                moduleId = "inventory",
-                percent = 100,
-                message = module.Message,
-            }, ct);
-        }
+        var inventory = invRun.Data!;
 
         var profile = InventoryCollector.InferProfile(inventory);
-        var completeness = "full";
-        if (missing.Any(m => m.Code is "WMI_UNAVAILABLE"))
+
+        var batRun = await RunModuleAsync(
+            client, sessionId, "battery", "B", ct,
+            onCollect: q =>
+            {
+                var battery = BatteryCollector.Collect((step, pct) =>
+                {
+                    Console.WriteLine($"  battery:{step} {pct}%");
+                    q.Enqueue((step, pct));
+                });
+                var msg = battery.Present == true
+                    ? $"Battery wear={battery.WearPercent?.ToString() ?? "Unknown"}% cycles={battery.CycleCount?.ToString() ?? "Unknown"}"
+                    : "No battery (desktop or absent)";
+                return (battery, msg, new[] { "batteryWear", "batteryCycles", "batteryCapacity" });
+            });
+        modules.Add(batRun.Module);
+        var batteryHealth = batRun.Data;
+
+        var smartRun = await RunModuleAsync(
+            client, sessionId, "smart", "B", ct,
+            onCollect: q =>
+            {
+                var smart = SmartCollector.Collect(inventory.Disks, elevated, (step, pct) =>
+                {
+                    Console.WriteLine($"  smart:{step} {pct}%");
+                    q.Enqueue((step, pct));
+                });
+                var warn = smart.Count(s => s.PredictFailure == true);
+                var msg = $"SMART disks={smart.Count} predictFailure={warn} elevated={elevated}";
+                return (smart, msg, new[] { "smartPredictFailure", "storageReliability" });
+            });
+        modules.Add(smartRun.Module);
+        var smartHealth = smartRun.Data ?? [];
+
+        var secRun = await RunModuleAsync(
+            client, sessionId, "security", "B", ct,
+            onCollect: q =>
+            {
+                var security = SecurityCollector.Collect((step, pct) =>
+                {
+                    Console.WriteLine($"  security:{step} {pct}%");
+                    q.Enqueue((step, pct));
+                });
+                var bl = security.BitLockerVolumes.Count(v => v.ProtectionStatus == 1);
+                var msg =
+                    $"TPM={security.TpmPresent} SecureBoot={security.SecureBootEnabled} BitLockerProtected={bl}";
+                return (security, msg, new[] { "tpm", "secureBoot", "bitlocker" });
+            });
+        modules.Add(secRun.Module);
+        var securityHealth = secRun.Data;
+
+        if (securityHealth?.TpmPresent is not null)
         {
-            completeness = "blocked";
+            inventory.TpmPresent = securityHealth.TpmPresent;
+            inventory.TpmSpecVersion = securityHealth.TpmSpecVersion ?? inventory.TpmSpecVersion;
         }
-        else if (!PreflightRunner.IsElevated() ||
-                 missing.Any(m => m.Code is "NOT_ELEVATED" or "NETWORK_UNAVAILABLE" or "VM_SUSPECT"))
+        if (securityHealth?.SecureBootEnabled is not null)
         {
-            completeness = "partial";
+            inventory.SecureBootEnabled = securityHealth.SecureBootEnabled;
         }
+
+        var health = new HealthSection
+        {
+            Battery = batteryHealth,
+            Smart = smartHealth,
+            Security = securityHealth,
+        };
+
+        var completeness = ComputeCompleteness(missing, elevated, profile, batteryHealth, smartHealth, securityHealth, modules);
 
         var reportId = Guid.NewGuid().ToString();
         var payload = new ReportPayload
@@ -215,13 +214,13 @@ public static class WaveAOrchestrator
             Completeness = completeness,
             MissingPrerequisites = missing,
             Preflight = checks,
-            Modules = [module],
+            Modules = modules,
             Inventory = inventory,
-            Health = new { battery = (object?)null, smart = (object?)null },
+            Health = health,
             CompositionDiffs = [],
             Authenticity = [],
             AgentBinaryHash = TryHashSelf(),
-            RawNotes = "Wave A inventory only. Wave B battery/SMART not collected yet.",
+            RawNotes = "Wave A inventory + Wave B health (battery, SMART, security/BitLocker).",
         };
         payload.PayloadSha256 = ComputePayloadHash(payload);
 
@@ -255,7 +254,178 @@ public static class WaveAOrchestrator
         Console.WriteLine($"Done. Profile={profile} Completeness={completeness}");
         Console.WriteLine($"Manufacturer={inventory.Manufacturer} Model={inventory.Model}");
         Console.WriteLine($"BoardSerial={inventory.BaseboardSerial} ChassisSerial={inventory.ChassisSerial}");
-        return 0;
+        if (batteryHealth?.WearPercent is not null)
+        {
+            Console.WriteLine($"Battery wear={batteryHealth.WearPercent}% cycles={batteryHealth.CycleCount}");
+        }
+
+        return invRun.Failed ? invRun.ExitCode : 0;
+    }
+
+    private sealed class ModuleRun<T>
+    {
+        public ModuleResult Module { get; init; } = new();
+        public T? Data { get; init; }
+        public bool Failed { get; init; }
+        public int ExitCode { get; init; }
+    }
+
+    private static async Task<ModuleRun<T>> RunModuleAsync<T>(
+        XcqcApiClient? client,
+        string sessionId,
+        string moduleId,
+        string wave,
+        CancellationToken ct,
+        Func<ConcurrentQueue<(string Step, int Pct)>, (T Data, string Message, string[] Keys)> onCollect)
+    {
+        var module = new ModuleResult
+        {
+            ModuleId = moduleId,
+            Wave = wave,
+            Status = "running",
+            StartedAt = DateTime.UtcNow.ToString("o"),
+        };
+
+        if (client is not null)
+        {
+            await client.PostEventAsync(sessionId, new
+            {
+                type = "module.started",
+                moduleId,
+                percent = 0,
+                message = $"Module {moduleId} started",
+            }, ct);
+        }
+
+        var progressQueue = new ConcurrentQueue<(string Step, int Pct)>();
+
+        try
+        {
+            var (data, message, keys) = onCollect(progressQueue);
+            await FlushProgressAsync(client, sessionId, moduleId, progressQueue, ct);
+
+            module.Status = "ok";
+            module.FinishedAt = DateTime.UtcNow.ToString("o");
+            module.Message = message;
+            module.EvidenceKeys = [.. keys];
+
+            if (client is not null)
+            {
+                await client.PostEventAsync(sessionId, new
+                {
+                    type = "module.finished",
+                    moduleId,
+                    percent = 100,
+                    message,
+                }, ct);
+            }
+
+            return new ModuleRun<T> { Module = module, Data = data, Failed = false, ExitCode = 0 };
+        }
+        catch (Exception ex)
+        {
+            await FlushProgressAsync(client, sessionId, moduleId, progressQueue, ct);
+            module.Status = "failed";
+            module.FinishedAt = DateTime.UtcNow.ToString("o");
+            module.Message = ex.Message;
+            Console.Error.WriteLine($"{moduleId} failed: {ex}");
+
+            if (client is not null)
+            {
+                await client.PostEventAsync(sessionId, new
+                {
+                    type = "module.failed",
+                    moduleId,
+                    message = ex.Message,
+                }, ct);
+            }
+
+            return new ModuleRun<T> { Module = module, Failed = true, ExitCode = 4 };
+        }
+    }
+
+    private static async Task FlushProgressAsync(
+        XcqcApiClient? client,
+        string sessionId,
+        string moduleId,
+        ConcurrentQueue<(string Step, int Pct)> queue,
+        CancellationToken ct)
+    {
+        if (client is null) return;
+        while (queue.TryDequeue(out var p))
+        {
+            try
+            {
+                await client.PostEventAsync(sessionId, new
+                {
+                    type = "module.progress",
+                    moduleId,
+                    percent = p.Pct,
+                    message = p.Step,
+                }, ct);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  (progress upload warn: {ex.Message})");
+            }
+        }
+    }
+
+    private static string ComputeCompleteness(
+        List<MissingPrerequisite> missing,
+        bool elevated,
+        string profile,
+        BatteryHealth? battery,
+        List<SmartDiskHealth> smart,
+        SecurityHealth? security,
+        List<ModuleResult> modules)
+    {
+        if (missing.Any(m => m.Code is "WMI_UNAVAILABLE"))
+        {
+            return "blocked";
+        }
+
+        var partial = !elevated ||
+                      missing.Any(m => m.Code is "NOT_ELEVATED" or "NETWORK_UNAVAILABLE" or "VM_SUSPECT");
+
+        if (profile is "laptop" && battery?.Present == true &&
+            battery.WearPercent is null && battery.DesignCapacityMwh is null)
+        {
+            partial = true;
+            if (!missing.Any(m => m.Code == "BATTERY_PARTIAL"))
+            {
+                missing.Add(new MissingPrerequisite
+                {
+                    Code = "BATTERY_PARTIAL",
+                    Message = "Laptop battery present but deep capacity/cycle data unavailable.",
+                });
+            }
+        }
+
+        if (smart.Any(s => s.PartialData == true || s.HealthStatus is "Partial" or "Unknown"))
+        {
+            partial = true;
+            if (!missing.Any(m => m.Code == "SMART_PARTIAL"))
+            {
+                missing.Add(new MissingPrerequisite
+                {
+                    Code = "SMART_PARTIAL",
+                    Message = "SMART / storage reliability counters incomplete (elevation or driver support).",
+                });
+            }
+        }
+
+        if (security?.TpmPresent is null || security.SecureBootEnabled is null)
+        {
+            partial = true;
+        }
+
+        if (modules.Any(m => m.Status is "failed" or "warn"))
+        {
+            partial = true;
+        }
+
+        return partial ? "partial" : "full";
     }
 
     private static string? TryHashSelf()
@@ -275,8 +445,18 @@ public static class WaveAOrchestrator
 
     private static string ComputePayloadHash(ReportPayload payload)
     {
+        var smartCount = payload.Health?.Smart?.Count ?? 0;
         var material =
-            $"{payload.ReportId}|{payload.SessionId}|{payload.CollectedAt}|{payload.Inventory.BaseboardSerial}|{payload.Inventory.ChassisSerial}|{payload.Inventory.RamModules.Count}|{payload.Inventory.Disks.Count}";
+            $"{payload.ReportId}|{payload.SessionId}|{payload.CollectedAt}|{payload.Inventory.BaseboardSerial}|{payload.Inventory.ChassisSerial}|{payload.Inventory.RamModules.Count}|{payload.Inventory.Disks.Count}|{smartCount}|{payload.Health?.Battery?.WearPercent}";
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(material))).ToLowerInvariant();
     }
+}
+
+/** Back-compat alias for Wave A entry points. */
+[SupportedOSPlatform("windows")]
+public static class WaveAOrchestrator
+{
+    public const string AgentVersion = XcqcOrchestrator.AgentVersion;
+    public static Task<int> RunAsync(OrchestratorOptions opt, CancellationToken ct = default) =>
+        XcqcOrchestrator.RunAsync(opt, ct);
 }

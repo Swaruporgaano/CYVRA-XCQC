@@ -1,24 +1,13 @@
 import cors from "cors";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
-import { FileSessionStore, MemorySessionStore } from "./store/sessions.js";
 import { createSeedState } from "./store/appState.js";
+import { createSessionStore } from "./store/neon.js";
 import { createSessionRouter } from "./routes/sessions.js";
 import { createAuthRouter } from "./routes/auth.js";
 import { createTenantsRouter } from "./routes/tenants.js";
 import { createLicensesRouter } from "./routes/licenses.js";
 import { createCertificatesRouter } from "./routes/certificates.js";
-
-function createStore() {
-  const mode = (process.env.XCQC_STORE ?? "memory").toLowerCase();
-  if (mode === "file") {
-    const dataDir = process.env.DATA_DIR ?? "./data";
-    console.log(`[xcqc-api] store=file dataDir=${dataDir}`);
-    return new FileSessionStore(dataDir);
-  }
-  console.log("[xcqc-api] store=memory (ephemeral — lost on restart / Render sleep)");
-  return new MemorySessionStore();
-}
 
 function ingestAuth(req: Request, res: Response, next: NextFunction): void {
   const expected = process.env.XCQC_INGEST_TOKEN;
@@ -36,9 +25,9 @@ function ingestAuth(req: Request, res: Response, next: NextFunction): void {
   res.status(401).json({ error: "unauthorized", message: "Invalid or missing ingest token" });
 }
 
-export function createApp() {
+export async function createApp() {
   const app = express();
-  const store = createStore();
+  const { store, mode } = await createSessionStore();
   const state = createSeedState();
 
   app.use(cors());
@@ -50,7 +39,7 @@ export function createApp() {
       service: "xcqc-api",
       product: "CYVRA XCQC",
       time: new Date().toISOString(),
-      store: (process.env.XCQC_STORE ?? "memory").toLowerCase(),
+      store: mode,
       neonConfigured: Boolean(process.env.DATABASE_URL),
       ingestAuth: Boolean(process.env.XCQC_INGEST_TOKEN),
     });
@@ -60,6 +49,7 @@ export function createApp() {
     res.json({
       product: "CYVRA XCQC",
       message: "Agents collect. API is truth. Web is windows onto truth.",
+      store: mode,
       endpoints: [
         "GET /health",
         "POST /auth/login",
@@ -98,8 +88,14 @@ const port = Number(process.env.PORT ?? 8080);
 const host = process.env.HOST ?? "0.0.0.0";
 
 if (process.env.XCQC_SKIP_LISTEN !== "1") {
-  const app = createApp();
-  app.listen(port, host, () => {
-    console.log(`[xcqc-api] listening on http://${host}:${port}`);
-  });
+  createApp()
+    .then((app) => {
+      app.listen(port, host, () => {
+        console.log(`[xcqc-api] listening on http://${host}:${port}`);
+      });
+    })
+    .catch((err) => {
+      console.error("[xcqc-api] failed to start", err);
+      process.exit(1);
+    });
 }

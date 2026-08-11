@@ -16,6 +16,7 @@
     "build:shared": "npm run build -w @cyvra/xcqc-shared",
     "build": "npm run build:shared && npm run build:api && npm run build:web",
     "start:api": "npm run start -w @cyvra/xcqc-api",
+    "install:all": "npm install && npm run build:shared",
     "typecheck": "npm run typecheck -w @cyvra/xcqc-shared && npm run typecheck -w @cyvra/xcqc-api && npm run typecheck -w @cyvra/xcqc-web"
   },
   "engines": {

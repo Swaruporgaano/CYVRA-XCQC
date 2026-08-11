@@ -52,7 +52,7 @@ public static class Program
         opt.OrgId = Environment.GetEnvironmentVariable("XCQC_ORG_ID") ?? opt.OrgId;
         opt.OperatorId = Environment.GetEnvironmentVariable("XCQC_OPERATOR_ID") ?? opt.OperatorId;
 
-        return await WaveAOrchestrator.RunAsync(opt);
+        return await XcqcOrchestrator.RunAsync(opt);
     }
 
     private static string Next(string[] args, ref int i)
@@ -67,13 +67,13 @@ public static class Program
     private static void PrintHelp()
     {
         Console.WriteLine("""
-CYVRA XCQC Windows Agent — Wave A inventory
+CYVRA XCQC Windows Agent — Wave A+B (inventory + health)
 
 Usage:
   Xcqc.Agent.exe [--api http://127.0.0.1:8080] [--token TOKEN] [--org lab-org] [--operator lab-operator] [--out .\evidence] [--offline]
 
-Run elevated (Run as administrator) for Full-depth path readiness (Wave B SMART/battery).
-Wave A inventory often works without elevation but certificates are marked partial.
+Run elevated (Run as administrator) for Full certificate depth (SMART, deep battery, BitLocker).
+Wave A inventory often works without elevation; Wave B SMART marks Partial when not elevated.
 """);
     }
 }

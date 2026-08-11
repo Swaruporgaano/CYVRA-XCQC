@@ -12,7 +12,7 @@ async function refreshPath() {
 
 runBtn.addEventListener("click", async () => {
   runBtn.disabled = true;
-  logEl.textContent = "Starting native Wave A…\n";
+  logEl.textContent = "Starting native Wave A+B…\n";
   const result = await window.xcqc.runAgent({
     apiBaseUrl: document.getElementById("api").value.trim(),
     token: document.getElementById("token").value.trim(),

@@ -1,5 +1,6 @@
--- CYVRA XCQC — Neon schema stub (apply when DATABASE_URL exists)
--- Do NOT require Neon for Wave A MVP (memory/file store is enough).
+-- CYVRA XCQC — Neon/Postgres schema (optional persistence)
+-- Apply when DATABASE_URL is set. API falls back to memory/file when unset.
+-- See docs/NEON-SETUP.md
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -81,3 +82,5 @@ CREATE TABLE IF NOT EXISTS device_baselines (
 
 CREATE INDEX IF NOT EXISTS idx_sessions_updated ON test_sessions(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_events_session ON session_events(session_id, ts);
+CREATE INDEX IF NOT EXISTS idx_reports_session ON reports(session_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_certificates_session ON certificates(session_id);

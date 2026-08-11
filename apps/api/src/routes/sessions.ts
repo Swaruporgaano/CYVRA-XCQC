@@ -225,7 +225,9 @@ export function createSessionRouter(store: SessionStore): Router {
       storedAt,
       certificateId,
       message:
-        "MVP finalize stored in-memory/file. Neon + server-side scoring not enabled yet.",
+        process.env.DATABASE_URL
+          ? "Finalize stored in Neon."
+          : "MVP finalize stored in-memory/file. Set DATABASE_URL for Neon persistence.",
     });
   });
 

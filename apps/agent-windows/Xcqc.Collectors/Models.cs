@@ -81,6 +81,61 @@ public sealed class InventorySection
     public List<VolumeInventory> Volumes { get; set; } = new();
 }
 
+public sealed class BatteryHealth
+{
+    public bool? Present { get; set; }
+    public string? Status { get; set; }
+    public int? DesignCapacityMwh { get; set; }
+    public int? FullChargeCapacityMwh { get; set; }
+    public int? CycleCount { get; set; }
+    public double? WearPercent { get; set; }
+    public int? EstimatedChargeRemaining { get; set; }
+    public string? Chemistry { get; set; }
+    public List<string> Notes { get; set; } = new();
+}
+
+public sealed class SmartDiskHealth
+{
+    public int? DiskIndex { get; set; }
+    public string? Model { get; set; }
+    public string? SerialNumber { get; set; }
+    public bool? PredictFailure { get; set; }
+    public string? FailureReason { get; set; }
+    public long? PowerOnHours { get; set; }
+    public long? WearLevel { get; set; }
+    public long? Temperature { get; set; }
+    public string? HealthStatus { get; set; }
+    public bool? PartialData { get; set; }
+    public List<string> Notes { get; set; } = new();
+}
+
+public sealed class BitLockerVolume
+{
+    public string? DriveLetter { get; set; }
+    public int? ProtectionStatus { get; set; }
+    public string? ProtectionStatusLabel { get; set; }
+    public int? ConversionStatus { get; set; }
+    public string? ConversionStatusLabel { get; set; }
+    public string? EncryptionMethod { get; set; }
+}
+
+public sealed class SecurityHealth
+{
+    public bool? TpmPresent { get; set; }
+    public string? TpmSpecVersion { get; set; }
+    public bool? TpmReady { get; set; }
+    public bool? SecureBootEnabled { get; set; }
+    public List<BitLockerVolume> BitLockerVolumes { get; set; } = new();
+    public List<string> Notes { get; set; } = new();
+}
+
+public sealed class HealthSection
+{
+    public BatteryHealth? Battery { get; set; }
+    public List<SmartDiskHealth> Smart { get; set; } = new();
+    public SecurityHealth? Security { get; set; }
+}
+
 public sealed class ModuleResult
 {
     public string ModuleId { get; set; } = "";
@@ -109,7 +164,7 @@ public sealed class ReportPayload
     public List<PreflightCheck> Preflight { get; set; } = new();
     public List<ModuleResult> Modules { get; set; } = new();
     public InventorySection Inventory { get; set; } = new();
-    public object? Health { get; set; }
+    public HealthSection? Health { get; set; }
     public List<object>? CompositionDiffs { get; set; }
     public List<object>? Authenticity { get; set; }
     public string? AgentBinaryHash { get; set; }

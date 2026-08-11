@@ -114,12 +114,56 @@ export interface VolumeInventory {
   volumeName: string | null;
 }
 
-/** Reserved for Wave B+ — present as empty stubs in Wave A finalize. */
+/** Wave B — battery, SMART, security (Windows WMI-first). */
+export interface BatteryHealth {
+  present?: boolean | null;
+  status?: string | null;
+  designCapacityMwh?: number | null;
+  fullChargeCapacityMwh?: number | null;
+  cycleCount?: number | null;
+  wearPercent?: number | null;
+  estimatedChargeRemaining?: number | null;
+  chemistry?: string | null;
+  notes?: string[];
+}
+
+export interface SmartDiskHealth {
+  diskIndex?: number | null;
+  model?: string | null;
+  serialNumber?: string | null;
+  predictFailure?: boolean | null;
+  failureReason?: string | null;
+  powerOnHours?: number | null;
+  wearLevel?: number | null;
+  temperature?: number | null;
+  healthStatus?: string | null;
+  partialData?: boolean | null;
+  notes?: string[];
+}
+
+export interface BitLockerVolume {
+  driveLetter?: string | null;
+  protectionStatus?: number | null;
+  protectionStatusLabel?: string | null;
+  conversionStatus?: number | null;
+  conversionStatusLabel?: string | null;
+  encryptionMethod?: string | null;
+}
+
+export interface SecurityHealth {
+  tpmPresent?: boolean | null;
+  tpmSpecVersion?: string | null;
+  tpmReady?: boolean | null;
+  secureBootEnabled?: boolean | null;
+  bitLockerVolumes?: BitLockerVolume[];
+  notes?: string[];
+}
+
 export interface HealthSection {
-  battery?: Record<string, unknown> | null;
-  smart?: Record<string, unknown>[] | null;
+  battery?: BatteryHealth | null;
+  smart?: SmartDiskHealth[] | null;
+  security?: SecurityHealth | null;
   eventHealth?: Record<string, unknown> | null;
-  bitlocker?: Record<string, unknown> | null;
 }
 
 export interface CompositionDiff {
