@@ -14,7 +14,7 @@ Connect the GitHub repo in [Cloudflare Dashboard](https://dash.cloudflare.com/) 
 | **Root directory** | `.` (repo root) |
 | **Build command** | `npm install && npm run build -w @cyvra/xcqc-shared && npm run build -w @cyvra/xcqc-web` |
 | **Deploy command** | `npx wrangler deploy -c apps/web/wrangler.jsonc` |
-| **Node version** | `20` (`.nvmrc` or `NODE_VERSION=20`) |
+| **Node version** | `22` (`.nvmrc` or `NODE_VERSION=22`) — **required** for Wrangler 4.x deploy |
 
 **Working directory matters:** always pass `-c apps/web/wrangler.jsonc` when deploying from repo root. Alternatively:
 
@@ -76,6 +76,7 @@ Preview locally with Vite: `npm run dev:web` (proxies `/api` → local Render).
 
 | Symptom | Fix |
 |---------|-----|
+| Build OK, deploy fails: `EBADENGINE` / wrangler requires `node >=22` | Set Cloudflare **Node version** to `22` (or env `NODE_VERSION=22`); retry deploy |
 | Workspace / monorepo auto-detect error | Deploy with `-c apps/web/wrangler.jsonc` or `cd apps/web` |
 | `'tsc' is not recognized` | Run `npm install` from repo root before build |
 | `dist` missing on deploy | Run shared + web build before `wrangler deploy` |

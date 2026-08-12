@@ -238,7 +238,7 @@ Host `apps/web` via **Wrangler** static assets (`apps/web/wrangler.jsonc`). Full
 | **Root directory** | `.` (repo root) |
 | **Build command** | `npm install && npm run build -w @cyvra/xcqc-shared && npm run build -w @cyvra/xcqc-web` |
 | **Deploy command** | `npx wrangler deploy -c apps/web/wrangler.jsonc` |
-| **Node version** | `20` (`NODE_VERSION=20` in env or `.nvmrc`) |
+| **Node version** | `22` (`NODE_VERSION=22` in env or `.nvmrc`) — Wrangler 4.x requires Node 22+ |
 
 SPA routing: `wrangler.jsonc` → `"not_found_handling": "single-page-application"` (no custom Worker script required).
 

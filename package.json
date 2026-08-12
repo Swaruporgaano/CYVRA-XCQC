@@ -22,6 +22,6 @@
     "typecheck": "npm run typecheck -w @cyvra/xcqc-shared && npm run typecheck -w @cyvra/xcqc-api && npm run typecheck -w @cyvra/xcqc-web"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   }
 }

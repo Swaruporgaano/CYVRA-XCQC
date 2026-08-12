@@ -26,6 +26,8 @@
 
 **Hosting freeze (2026-08-12):** Operator web = **Cloudflare Workers + Wrangler** (`apps/web/wrangler.jsonc`). **Abandoned:** Netlify, Cloudflare Pages-only static deploy. API stays on **Render**; database stays on **Neon**.
 
+**Cloudflare Workers deploy (2026-08-12):** Build succeeds with Node 20; **deploy** needs **Node 22** (`NODE_VERSION=22` or dashboard Node version `22`) because Wrangler 4.x (`>=22`). Deploy command stays `npx wrangler deploy -c apps/web/wrangler.jsonc`.
+
 ---
 
 ## Completed so far
