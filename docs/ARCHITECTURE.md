@@ -16,7 +16,7 @@
          memory/file   Neon (later)  optional KV
               │
               ▼
-         Netlify apps/web (admin / operator windows onto truth)
+         Cloudflare Pages apps/web (admin / operator windows onto truth)
 ```
 
 ## Principles

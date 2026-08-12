@@ -13,7 +13,7 @@
 
 | Verdict | Rationale |
 |---------|-----------|
-| **Keep** | Monorepo layout, Plan 3 stack (Neon → Render → Netlify), Wave A+B WMI collectors (`Xcqc.Collectors`), session ingest protocol (`/sessions` → events → finalize), Electron shell scaffold, operator web shell |
+| **Keep** | Monorepo layout, Plan 3 stack (Neon → Render → Cloudflare Pages), Wave A+B WMI collectors (`Xcqc.Collectors`), session ingest protocol (`/sessions` → events → finalize), Electron shell scaffold, operator web shell |
 | **Insert as critical path** | Commercial identity layer (Document 01): mobile OTP → 16-digit license → download token → one-device activation → per-device tokens |
 | **Refactor** | API route namespace (`/api/v1/*`), Neon schema (additive commercial tables), Electron integration (CLI spawn → Named Pipe IPC), web split (customer portal vs operator) |
 | **Rebuild (narrow)** | Auth/licensing API surface, customer-facing web flows, Electron auth UI — not the hardware collectors |
@@ -36,7 +36,7 @@ BRIDGE (this plan): Finish Plan 3 E2E (1 week) → PAUSE new hardware → licens
 ## 2. Target architecture (Word-doc aligned)
 
 ```text
-                         CYVRA XCQC CLOUD (Neon + Render + Netlify)
+                         CYVRA XCQC CLOUD (Neon + Render + Cloudflare Pages)
                                     │
                     ┌───────────────┼───────────────┐
                     ▼               ▼               ▼
@@ -77,8 +77,8 @@ BRIDGE (this plan): Finish Plan 3 E2E (1 week) → PAUSE new hardware → licens
 |-------|------|--------------|
 | **Neon** | Customers, keys (hashed), download tokens, activations, devices, scans, audit | Scoring secrets, raw 16-digit keys, plaintext OTP |
 | **Render API** | Auth, license state machine, device binding policy, ingest, certificates issuance rules | WMI / hardware probes |
-| **Customer portal (Netlify)** | Register, OTP, download agent, view reports | Operator RBAC, tenant admin |
-| **Operator web (Netlify)** | Sessions, tenants, lab ingest, internal licenses | Customer self-registration |
+| **Customer portal (Cloudflare Pages)** | Register, OTP, download agent, view reports | Operator RBAC, tenant admin |
+| **Operator web (Cloudflare Pages)** | Sessions, tenants, lab ingest, internal licenses | Customer self-registration |
 | **Electron** | UX, cloud auth, IPC client, progress display | Parsing WMI classes, license hashing |
 | **DeviceAgent** | Discovery, diagnostics, normalized JSON | Cloud license decisions, OTP |
 | **DeviceService** | Elevated ops (future SMART depth, tamper-resistant probes) | UI, cloud calls |
@@ -124,12 +124,12 @@ Phases are **ordered**. Do not start a phase until its dependencies show green i
 **Work:**
 - Apply current `neon-schema.sql` to Neon (tenant/session tables — keep).
 - Set Render `DATABASE_URL`, verify `/health` → `store: neon`.
-- Set Netlify `VITE_API_URL`.
+- Set Cloudflare Pages `VITE_API_URL`.
 - Windows laptop: agent or Electron → Render session visible in operator web.
 
 **Definition of Done (DoD):**
 - [ ] `curl https://<render>/health` → `ok`, `neonConfigured: true`
-- [ ] Netlify operator site loads Sessions from Render
+- [ ] Cloudflare Pages operator site loads Sessions from Render
 - [ ] One full agent run creates session + finalize on Neon
 - [ ] `XCQC_INGEST_TOKEN` documented as **lab-only** with cutover date
 
@@ -207,7 +207,7 @@ Phases are **ordered**. Do not start a phase until its dependencies show green i
 
 ### Phase L4 — Customer portal (web)
 
-**Goal:** Netlify-hosted **customer** self-service (not operator admin).
+**Goal:** Cloudflare Pages-hosted **customer** self-service (not operator admin).
 
 **Recommended structure:** **Two apps, one monorepo**
 
@@ -217,7 +217,7 @@ apps/
   web/            ← RENAME intent: operator/admin (existing pages)
 ```
 
-Alternative (if user wants single deploy): `apps/web` with route prefixes `/portal/*` vs `/ops/*` and separate Netlify sites pointing at different `base` paths — **not recommended** (bundle bloat, auth confusion).
+Alternative (if user wants single deploy): `apps/web` with route prefixes `/portal/*` vs `/ops/*` and separate Cloudflare Pages sites pointing at different `base` paths — **not recommended** (bundle bloat, auth confusion).
 
 **Portal screens (MVP):**
 1. Welcome / Register (mobile)
@@ -227,10 +227,10 @@ Alternative (if user wants single deploy): `apps/web` with route prefixes `/port
 5. Reports list (post-activation, read-only)
 
 **DoD:**
-- [ ] Second Netlify site `xcqc-portal` (or subdomain) with `VITE_API_URL`
+- [ ] Second Cloudflare Pages site `xcqc-portal` (or subdomain) with `VITE_API_URL`
 - [ ] Customer can register → receive key (display once) → authorize download
 - [ ] Operator `apps/web` unchanged for lab/tenant use
-- [ ] CORS allows both Netlify origins
+- [ ] CORS allows both Cloudflare Pages origins
 
 **GitHub checkpoint:** `feat(web-portal): customer registration and download`
 
@@ -418,7 +418,7 @@ Alternative (if user wants single deploy): `apps/web` with route prefixes `/port
 | `apps/web` | **KEEP** as operator | Do not morph into customer portal |
 | `apps/web-portal` | **BUILD NEW** | Customer self-service |
 | `packages/shared` | **KEEP + EXTEND** | Add agent IPC + API DTOs |
-| `render.yaml`, `netlify.toml` | **REFACTOR** | Second Netlify site config; Render env vars |
+| `render.yaml`, `docs/CLOUDFLARE-PAGES.md` | **REFACTOR** | Second Cloudflare Pages project config; Render env vars |
 | Session ingest protocol | **KEEP** | Map activated device → session owner |
 | `XCQC_INGEST_TOKEN` | **KEEP TEMP** | Lab/operator only until L3 cutover flag |
 | Tenant RBAC (`tenants`, `users`) | **KEEP** | Parallel track for B2B lab; map `tenant_id` ↔ `customer_id` later if needed |
@@ -556,18 +556,18 @@ CREATE TABLE audit_logs (
 
 ## 6. Web: customer portal vs operator
 
-### Recommendation: **two Netlify sites, two apps**
+### Recommendation: **two Cloudflare Pages sites, two apps**
 
 | App | Path | Audience | Auth |
 |-----|------|----------|------|
-| `apps/web-portal` | `portal.cyvra.app` or `xcqc-portal.netlify.app` | End customer | Mobile + OTP + JWT |
-| `apps/web` (existing) | `ops.cyvra.app` or existing Netlify | Lab, tenant admin, operators | Email/demo → future SSO |
+| `apps/web-portal` | `portal.cyvra.app` or `xcqc-portal.pages.dev` | End customer | Mobile + OTP + JWT |
+| `apps/web` (existing) | `ops.cyvra.app` or existing Cloudflare Pages | Lab, tenant admin, operators | Email/demo → future SSO |
 
 **Why not one app:** Different auth flows, RBAC models, and release cadence. Operator demo tokens must not ship in customer bundle.
 
 **Shared code:** Extract `packages/ui` or share Tailwind tokens via `packages/shared` if duplication hurts.
 
-**netlify.toml:** Split into `netlify.portal.toml` + `netlify.ops.toml` or monorepo two-site docs in DEPLOY.
+**Pages config:** Document per-project build settings in [`CLOUDFLARE-PAGES.md`](./CLOUDFLARE-PAGES.md) and DEPLOY runbook (two Pages projects for ops + portal).
 
 ---
 
@@ -654,11 +654,11 @@ Push after each phase DoD. Suggested branch strategy: `main` protected; feature 
 
 | Checkpoint | Branch/tag | Deploy |
 |------------|------------|--------|
-| P0 E2E verified | merge to `main` | Render + Netlify auto |
+| P0 E2E verified | merge to `main` | Render + Cloudflare Pages auto |
 | L1 schema | `feat/commercial-schema` | Apply migration manually on Neon |
 | L2 auth | `feat/v1-auth` | Render staging env |
 | L3 license | `feat/v1-license` | Render staging |
-| L4 portal | `feat/web-portal` | New Netlify site |
+| L4 portal | `feat/web-portal` | New Cloudflare Pages site |
 | L5 electron auth | `feat/electron-auth` | Manual installer build |
 | H1 IPC | `feat/named-pipe-ipc` | Manual agent build |
 | H2 AOT | `feat/native-aot` | CI artifact |
@@ -676,7 +676,7 @@ Push after each phase DoD. Suggested branch strategy: `main` protected; feature 
 | SMS provider cost/abuse | OTP spam | Rate limits + captcha on register | `SMS_PROVIDER=console` dev-only |
 | Dual auth confusion | Security hole | Feature flag `XCQC_LEGACY_INGEST=1` explicit | Re-enable ingest token only |
 | AOT breaks WMI | Agent useless | H2 only after tests | Ship non-AOT build |
-| Two Netlify sites complexity | Deploy drift | Document env vars per site | Single portal first, ops local-only |
+| Two Cloudflare Pages sites complexity | Deploy drift | Document env vars per site | Single portal first, ops local-only |
 | Fingerprint false positives | Support burden | `SAME_DEVICE` policy + admin rebind API | Manual `agent_activations` reset |
 | Render free tier sleep | Bad first customer UX | Upgrade or cron ping | Accept for dev |
 | Scope creep on D2 | Delays v1 | Ship automated-only first | Defer operator UI tests |
@@ -710,8 +710,8 @@ Answer **before** implementation starts. Cursor agents treat unchecked items as 
 |---|------|--------|
 | A1 | Neon project + pooled `DATABASE_URL` | ☐ |
 | A2 | Render `xcqc-api` connected to GitHub | ☐ |
-| A3 | Netlify ops site + `VITE_API_URL` | ☐ |
-| A4 | Netlify portal site (new) planned | ☐ |
+| A3 | Cloudflare Pages ops site + `VITE_API_URL` | ☐ |
+| A4 | Cloudflare Pages portal site (new) planned | ☐ |
 | A5 | SMS provider chosen (or console dev OK for L2) | ☐ |
 | A6 | `JWT_SECRET`, `OTP_PEPPER`, `LICENSE_PEPPER` generated | ☐ |
 | A7 | Windows 10/11 test laptop available | ☐ |

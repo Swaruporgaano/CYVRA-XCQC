@@ -1,6 +1,6 @@
 # Free stack — timing & wiring
 
-Target: **Netlify (later) + Render free web service (+ optional KV) + Neon (when needed) + GitHub Codespaces/Actions**.
+Target: **Cloudflare Workers (Wrangler) + Render free web service (+ optional KV) + Neon (when needed) + GitHub Codespaces/Actions**.
 
 ## Render (now)
 
@@ -24,13 +24,13 @@ Until then: `XCQC_STORE=memory` or `file` is enough to unblock the Windows agent
 
 When creating Neon: set `DATABASE_URL` (pooled) on Render; migrate off MemorySessionStore.
 
-## Netlify (create when…)
+## Cloudflare Workers (create when…)
 
-`apps/web` admin/operator shell is scaffolded now. Create the Netlify **site** when you want a public URL:
+`apps/web` admin/operator shell is scaffolded now. Deploy with **Wrangler** when you want a public URL:
 
 - Live session view / certificates / licenses
 - Set `VITE_API_URL` → Render API
-- Use root `netlify.toml`
+- See [`CLOUDFLARE-WORKERS.md`](./CLOUDFLARE-WORKERS.md) (build from repo root; deploy `apps/web/wrangler.jsonc`)
 
 Local `npm run dev:web` is enough until then. Prefer all scoring/business logic on the Render API.
 
@@ -48,4 +48,4 @@ Local `npm run dev:web` is enough until then. Prefer all scoring/business logic 
 | `DATABASE_URL` | When Neon is created |
 | `JWT_SECRET` / license keys | Before real auth/licenses |
 | Code signing cert | Before production agent distribution |
-| Netlify `VITE_API_URL` | When web app exists |
+| Cloudflare Workers `VITE_API_URL` | When web app exists |

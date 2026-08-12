@@ -7,7 +7,7 @@ Source: `CYVRA XCQC — Technical Feasibility & Architecture Document.docx`
 1. **Naming:** DOCX free-stack section proposed **CYVRA Certis**; primary title + freeze → **CYVRA XCQC** / `Xcqc.*` namespaces. Repo stays `CYVRA-XCQC`.
 2. **Phase order:** DOCX Phase 1 listed Android + Windows together; freeze + Windows-first section → **Windows Wave A before Android**.
 3. **Neon:** DOCX Phase 0 wires Neon early; freeze → **defer Neon** until durability / Wave C baselines needed; memory/file store for ingest MVP.
-4. **Netlify:** DOCX scaffolds admin early; freeze → **defer Netlify** until live admin UI is in scope.
+4. **Cloudflare Pages:** DOCX scaffolds admin early; freeze → host on Pages when live admin UI is in scope (`docs/CLOUDFLARE-PAGES.md`).
 5. **Agent naming:** DOCX samples used `Certis.Agent`; implemented as **`Xcqc.Agent` / `Xcqc.Collectors`**.
 6. **Protocol:** Follow DOCX live flow `session.create` → `event.progress` → `report.finalize` as REST `/sessions`, `/events`, `/finalize`.
 7. **Authenticity:** Ship structured verdicts later (Match / ChangedSinceLastScan / …); Wave A collects serial evidence only.

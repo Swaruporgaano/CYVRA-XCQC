@@ -3,7 +3,7 @@
 **Review date:** 2026-08-11  
 **Reviewer:** Cursor agent (retry after `resource_exhausted`)  
 **Extraction method:** Python `zipfile` + `word/document.xml` parse (no `python-docx`; fastest path)  
-**Compared against:** Windows .NET Wave A+B, Electron shell, `apps/api`, `apps/web`, Plan 3 (Neon → Render → Netlify)
+**Compared against:** Windows .NET Wave A+B, Electron shell, `apps/api`, `apps/web`, Plan 3 (Neon → Render → Cloudflare Pages)
 
 ---
 
@@ -30,7 +30,7 @@ A **development-ready SaaS + desktop specification** for CYVRA XCQC Device Intel
 
 **Target stack (locked in doc):**
 
-- **Web:** React + TypeScript + Tailwind on **Netlify** (customer portal: registration, OTP, license, download, reports)
+- **Web:** React + TypeScript + Tailwind on **Cloudflare Pages** (customer portal: registration, OTP, license, download, reports)
 - **API:** Node.js + TypeScript on **Render** (Fastify or NestJS suggested)
 - **DB:** **Neon PostgreSQL** (customers, license_keys, download_tokens, agent_activations, devices, device_scans, device_components, audit_logs)
 - **Desktop:** **Electron** (UI, auth, progress, certificate) + **C#/.NET Native AOT** (hardware engine)
@@ -95,7 +95,7 @@ A **development-ready SaaS + desktop specification** for CYVRA XCQC Device Intel
 
 | Area | Word docs | Current repo | Alignment |
 |------|-----------|--------------|-----------|
-| **Cloud stack** | Netlify + Render + Neon | Plan 3 runbook; `render.yaml`, `netlify.toml`, `neon-schema.sql` | **Strong** |
+| **Cloud stack** | Cloudflare Pages + Render + Neon | Plan 3 runbook; `render.yaml`, `docs/CLOUDFLARE-PAGES.md`, `neon-schema.sql` | **Strong** |
 | **API framework** | Fastify or NestJS | Express + TypeScript | Minor delta |
 | **API routes** | `/api/v1/auth`, `/license`, `/device/scan` | `/sessions`, `/events`, `/finalize`, stub `/auth/login`, `/licenses` | **Different model** |
 | **DB schema** | Customer + mobile + 16-digit keys + download tokens | Tenant RBAC + `test_sessions` + `device_baselines` (Wave C) | **Different model** |
@@ -121,7 +121,7 @@ A **development-ready SaaS + desktop specification** for CYVRA XCQC Device Intel
 
 ### **NEEDS ADJUSTMENT**
 
-The repo is **architecturally on the right path** for stack choice (Electron shell + .NET collectors + Render API + Neon + Netlify) and for **Windows-first Wave A+B inventory/health**. It is **not a full redo**.
+The repo is **architecturally on the right path** for stack choice (Electron shell + .NET collectors + Render API + Neon + Cloudflare Pages) and for **Windows-first Wave A+B inventory/health**. It is **not a full redo**.
 
 However, the Word docs define a **customer-facing SaaS licensing product** with a **strict build order** (identity/licensing before hardware). The repo has optimized for **operator ingest MVP** and **hardware proof** first. That is a deliberate freeze choice (see `DOCX-ALIGNMENT.md`, `FREE-STACK.md`) but it **diverges from the Word doc’s locked milestone #1**.
 
@@ -177,7 +177,7 @@ Use these to decide whether to **pivot toward doc order**, **continue Wave C+ ha
 
 9. **Device binding tolerance:** When RAM or storage is replaced, should the backend default to **SAME_DEVICE** (doc tolerance policy) or **require manual re-bind** for any fingerprint drift?
 
-10. **Plan 3 deploy:** With Neon/Render/Netlify accounts linked, should the **immediate next step** be **end-to-end agent → Render** verification, or **schema migration** to support license tables before any public customer onboarding?
+10. **Plan 3 deploy:** With Neon/Render/Cloudflare Pages accounts linked, should the **immediate next step** be **end-to-end agent → Render** verification, or **schema migration** to support license tables before any public customer onboarding?
 
 ---
 

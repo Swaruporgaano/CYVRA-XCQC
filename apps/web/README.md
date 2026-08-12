@@ -16,4 +16,4 @@ Demo roles in the left nav map to tokens `demo-super` / `demo-admin` / `demo-ops
 
 ## Deploy
 
-Set `VITE_API_URL` to the Render API URL. Use `netlify.toml` at repo root.
+Set `VITE_API_URL` to the Render API URL. Deploy with Wrangler — see [`docs/CLOUDFLARE-WORKERS.md`](../../docs/CLOUDFLARE-WORKERS.md).

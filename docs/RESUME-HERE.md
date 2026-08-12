@@ -8,7 +8,7 @@ Use this file when you come back to the project after a break.
 |-----|---------|
 | [**FREEZE-STATUS.md**](./FREEZE-STATUS.md) | Frozen decisions, completed work, **PENDING** by phase, **NEXT** actions |
 | [**GAP-BRIDGE-PLAN.md**](./GAP-BRIDGE-PLAN.md) | Master phased route P0 → R1 |
-| [**P0-VERIFICATION-CHECKLIST.md**](./P0-VERIFICATION-CHECKLIST.md) | Plan 3 E2E — what to click in Neon / Render / Netlify |
+| [**P0-VERIFICATION-CHECKLIST.md**](./P0-VERIFICATION-CHECKLIST.md) | Plan 3 E2E — what to click in Neon / Render / Cloudflare Workers |
 
 **Next action:** **P0** (dashboard verification + one agent run) → **L1** (apply `neon-schema-l1-commercial.sql`).
 
@@ -38,7 +38,7 @@ Use this file when you come back to the project after a break.
 | Done | Next (you + agent) |
 |------|---------------------|
 | Freeze all YES — ADJUST, licensing critical path | **P0:** Apply `neon-schema.sql`, set Render `DATABASE_URL`, verify `/health` |
-| Wave A+B, Plan 3 scaffold, GAP-BRIDGE plan | **P0:** Netlify `VITE_API_URL`, Windows agent → Neon session |
+| Wave A+B, Plan 3 scaffold, GAP-BRIDGE plan | **P0:** Cloudflare Workers `VITE_API_URL`, Windows agent → Neon session |
 | L1 migration file in repo | **L1:** Run `neon-schema-l1-commercial.sql` after P0 |
 | | **L2:** Auth + OTP API (not started) |
 
@@ -48,7 +48,8 @@ Use this file when you come back to the project after a break.
 
 | Doc | Purpose |
 |-----|---------|
-| [`DEPLOY-RENDER-NEON-NETLIFY.md`](./DEPLOY-RENDER-NEON-NETLIFY.md) | Plan 3 deploy runbook |
+| [`DEPLOY-RENDER-NEON-NETLIFY.md`](./DEPLOY-RENDER-NEON-NETLIFY.md) | Plan 3 deploy runbook (Phase D = Cloudflare Workers) |
+| [`CLOUDFLARE-WORKERS.md`](./CLOUDFLARE-WORKERS.md) | Wrangler deploy, SPA assets, build env vars |
 | [`NEON-SETUP.md`](./NEON-SETUP.md) | Neon Postgres + schema apply order |
 | [`DOC-REVIEW-FINDINGS.md`](./DOC-REVIEW-FINDINGS.md) | Word doc vs repo gap analysis |
 | [`CODESPACE-RUN.md`](./CODESPACE-RUN.md) | Run API + web in Codespace |
@@ -62,7 +63,7 @@ Store only in platform dashboards or local `.env`:
 
 - Neon `DATABASE_URL` (pooled)
 - Render `XCQC_INGEST_TOKEN`, `JWT_SECRET`, `OTP_PEPPER`, `LICENSE_PEPPER` (L2+)
-- Netlify `VITE_API_URL`
+- Cloudflare Workers `VITE_API_URL`
 
 Copy names from [`.env.example`](../.env.example).
 

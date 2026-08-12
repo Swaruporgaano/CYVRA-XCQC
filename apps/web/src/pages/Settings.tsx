@@ -25,8 +25,8 @@ export function SettingsPage() {
               <td>Optional until durable store / Wave C baselines</td>
             </tr>
             <tr>
-              <th>Netlify</th>
-              <td>Deploy this app when ready (`netlify.toml` stub present)</td>
+              <th>Cloudflare Workers</th>
+              <td>Host via Wrangler (`docs/CLOUDFLARE-WORKERS.md`)</td>
             </tr>
           </tbody>
         </table>

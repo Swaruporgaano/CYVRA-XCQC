@@ -22,7 +22,7 @@ CYVRA XCQC/
 ├── packages/shared/         ReportPayload, grades, roles, events
 ├── docs/                    Architecture, Windows MVP, free-stack, Render
 ├── render.yaml
-├── netlify.toml
+├── docs/CLOUDFLARE-PAGES.md
 ├── .env.example
 └── README.md
 ```
@@ -62,7 +62,7 @@ npm start
 2. Build/run Wave A **as Administrator** on a physical Windows PC
 3. Push repo to GitHub when ready; wire Render env `XCQC_INGEST_TOKEN`
 4. **Neon:** create when durable store / Wave C needed; apply `apps/api/sql/neon-schema.sql`
-5. **Netlify:** create site when hosting web; set `VITE_API_URL`
+5. **Cloudflare Pages:** connect Git project when hosting web; set `VITE_API_URL` — see `docs/CLOUDFLARE-PAGES.md`
 6. Code signing later (Wave E)
 
 ## Known gaps vs production

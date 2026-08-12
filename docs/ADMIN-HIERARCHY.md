@@ -21,6 +21,6 @@ Ranks are mirrored in `@cyvra/xcqc-shared` (`ADMIN_ROLES` / `ROLE_RANK`).
 3. Business Reporting  
 4. Device Standardisation & Compliance  
 
-Admin IA (later Netlify): `/admin/tenants`, `/sessions`, `/session/:id`, certificates, exports.
+Admin IA (Cloudflare Pages): `/admin/tenants`, `/sessions`, `/session/:id`, certificates, exports.
 
 Wave A MVP does **not** ship the web admin — only API storage of sessions + finalized `ReportPayload`.

@@ -1,7 +1,7 @@
 # P0 — Plan 3 E2E verification checklist
 
 **Phase:** P0 (Plan 3 closure)  
-**Depends on:** Neon + Render + Netlify accounts linked to repo  
+**Depends on:** Neon + Render + Cloudflare Workers accounts linked to repo  
 **Master plan:** [`GAP-BRIDGE-PLAN.md`](./GAP-BRIDGE-PLAN.md) § Phase P0  
 **Freeze status:** [`FREEZE-STATUS.md`](./FREEZE-STATUS.md)
 
@@ -65,18 +65,21 @@ If `store` is `memory` but `neonConfigured` is `true`, check Render logs for Pos
 
 ---
 
-## 4. Netlify — operator web (user action)
+## 4. Cloudflare Workers — operator web (user action)
 
-1. Open [Netlify](https://app.netlify.com) → site for `apps/web`.
-2. **Site configuration → Environment variables:**
+1. Open [Cloudflare Dashboard](https://dash.cloudflare.com) → **Workers & Pages** → your Worker for `cyvra-xcqc-web`.
+2. **Build environment variables** (or set locally before build):
 
    | Variable | Value |
    |----------|-------|
    | `VITE_API_URL` | `https://<render-host>` (no trailing slash) |
    | `VITE_INGEST_TOKEN` | Same as Render `XCQC_INGEST_TOKEN` (optional for UI demos) |
 
-3. Trigger **Deploy** (clear cache if env changed).
-4. Open site → Sessions page should call Render (not localhost).
+3. **Build:** `npm install && npm run build -w @cyvra/xcqc-shared && npm run build -w @cyvra/xcqc-web`
+4. **Deploy:** `npx wrangler deploy -c apps/web/wrangler.jsonc` (or push to `main` if CI wired).
+5. Open site → Sessions page should call Render (not localhost).
+
+See [`CLOUDFLARE-WORKERS.md`](./CLOUDFLARE-WORKERS.md) for full dashboard settings.
 
 ---
 
@@ -136,7 +139,7 @@ See [`DEPLOY-RENDER-NEON-NETLIFY.md`](./DEPLOY-RENDER-NEON-NETLIFY.md) Phase A.
 |-------|-------|
 | Neon schema applied | ☐ |
 | Render health `store: neon` | ☐ |
-| Netlify ops loads sessions | ☐ |
+| Cloudflare Workers ops loads sessions | ☐ |
 | Windows agent full run on Neon | ☐ |
 | Ingest token documented as lab-only | ☐ |
 
@@ -150,6 +153,6 @@ When all pass → proceed to **L1** (`neon-schema-l1-commercial.sql`) then **L2*
 |---------|------------|
 | `401 unauthorized` on sessions | Match `--token` / header to Render `XCQC_INGEST_TOKEN` |
 | `store: memory` on Render | Set `DATABASE_URL`; check Neon URL and schema |
-| Netlify shows empty / network error | `VITE_API_URL` wrong; redeploy after env change |
+| Worker site shows empty / network error | `VITE_API_URL` wrong; rebuild and redeploy after env change |
 | Finalize 500 | Session must exist in `test_sessions` before finalize |
 | CORS error in browser | API uses open `cors()` — usually wrong API URL |

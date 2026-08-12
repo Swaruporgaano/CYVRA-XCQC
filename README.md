@@ -9,7 +9,7 @@ On-device diagnostic agents + cloud control plane for Post-Production / OQC–IQ
 1. Product/repo: **CYVRA XCQC** (`CYVRA-XCQC`) — DOCX “Certis” was an alternate name; XCQC wins.
 2. **Windows Wave A = native .NET 8** (WMI inventory + upload + preflight).
 3. **Next after Wave A = Electron UI shell** that drives the native agent (not Electron-only diagnostics).
-4. Reuse **Render**; **in-memory/file** until Neon; scaffold **Netlify** (`apps/web` + `netlify.toml`).
+4. Reuse **Render**; **in-memory/file** until Neon; host **Cloudflare Workers** (`apps/web` + `docs/CLOUDFLARE-WORKERS.md`).
 5. Protocol: `POST /sessions` → events → `finalize` with `ReportPayload` v1.
 
 ## Monorepo
@@ -23,7 +23,7 @@ On-device diagnostic agents + cloud control plane for Post-Production / OQC–IQ
 | `apps/agent-android` | Stub README (Kotlin later) |
 | `packages/shared` | ReportPayload, grades, roles, session events |
 | `docs/` | Runbooks + free-stack timing |
-| `render.yaml` / `netlify.toml` | Deploy stubs |
+| `render.yaml` / `docs/CLOUDFLARE-WORKERS.md` | Deploy stubs |
 
 ## Quick start
 
@@ -61,18 +61,19 @@ npm start
 
 ## Plan 3 — Deploy (recommended)
 
-Fix Codespace `/health` first, then cloud in order: **Neon → Render → Netlify → Windows agent**.
+Fix Codespace `/health` first, then cloud in order: **Neon → Render → Cloudflare Workers → Windows agent**.
 
-Full step-by-step: [`docs/DEPLOY-RENDER-NEON-NETLIFY.md`](docs/DEPLOY-RENDER-NEON-NETLIFY.md)
+Full step-by-step: [`docs/DEPLOY-RENDER-NEON-NETLIFY.md`](docs/DEPLOY-RENDER-NEON-NETLIFY.md) (Netlify deprecated → Cloudflare Workers)
 
-## Neon / Netlify
+## Neon / Cloudflare Workers
 
 - **Neon:** optional durable storage — [`docs/NEON-SETUP.md`](docs/NEON-SETUP.md). Schema: `apps/api/sql/neon-schema.sql`.
-- **Netlify:** create when hosting `apps/web`; set `VITE_API_URL` to Render API.
+- **Cloudflare Workers:** host `apps/web` via Wrangler; set `VITE_API_URL` to Render API — [`docs/CLOUDFLARE-WORKERS.md`](docs/CLOUDFLARE-WORKERS.md).
 
 ## Docs
 
-- [`docs/DEPLOY-RENDER-NEON-NETLIFY.md`](docs/DEPLOY-RENDER-NEON-NETLIFY.md) — **Plan 3** deploy runbook
+- [`docs/DEPLOY-RENDER-NEON-NETLIFY.md`](docs/DEPLOY-RENDER-NEON-NETLIFY.md) — **Plan 3** deploy runbook (Phase D = Cloudflare Workers)
+- [`docs/CLOUDFLARE-WORKERS.md`](docs/CLOUDFLARE-WORKERS.md) — Wrangler deploy, SPA assets, build env vars
 - [`docs/CODESPACE-RUN.md`](docs/CODESPACE-RUN.md)
 - [`docs/NEON-SETUP.md`](docs/NEON-SETUP.md)
 

@@ -12,7 +12,7 @@ Real WMI inventory + health agent for **CYVRA XCQC**. Collectors are dumb; API s
 | API running (`npm run dev:api`) | Yes for upload path; or use `--offline` |
 | Code signing cert | Later (Wave E) |
 | Neon | **No** for Wave A |
-| Netlify | **No** for Wave A |
+| Cloudflare Pages | **No** for Wave A |
 
 ## Build
 

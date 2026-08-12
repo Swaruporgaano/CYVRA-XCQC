@@ -14,6 +14,8 @@
     "build:api": "npm run build -w @cyvra/xcqc-api",
     "build:web": "npm run build -w @cyvra/xcqc-web",
     "build:shared": "npm run build -w @cyvra/xcqc-shared",
+    "build:pages": "npm install && npm run build:shared && npm run build:web",
+    "deploy:web": "npm run build -w @cyvra/xcqc-shared && npm run build -w @cyvra/xcqc-web && npm run deploy -w @cyvra/xcqc-web",
     "build": "npm run build:shared && npm run build:api && npm run build:web",
     "start:api": "npm run start -w @cyvra/xcqc-api",
     "install:all": "npm install && npm run build:shared",

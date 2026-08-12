@@ -1,4 +1,6 @@
-# Plan 3 — Codespace health → Neon → Render → Netlify
+# Plan 3 — Codespace health → Neon → Render → Cloudflare Workers
+
+> **Note:** Netlify hosting is **deprecated** for this repo. Use **Cloudflare Workers (Wrangler)** for `apps/web` (Phase D). See [`CLOUDFLARE-WORKERS.md`](./CLOUDFLARE-WORKERS.md).
 
 End-to-end deployment for **CYVRA XCQC**: fix local/Codespace API first, then cloud stack in order.
 
@@ -7,10 +9,10 @@ End-to-end deployment for **CYVRA XCQC**: fix local/Codespace API first, then cl
 | **A** | `curl /health` works in Codespace |
 | **B** | Neon Postgres + schema |
 | **C** | API on Render (reuse existing project if possible) |
-| **D** | Web on Netlify (`VITE_API_URL` → Render) |
+| **D** | Web on Cloudflare Workers (`VITE_API_URL` → Render) |
 | **E** | Windows agent → Render; verify full loop |
 
-**Repo paths that matter:** `apps/api`, `apps/web`, `render.yaml`, `netlify.toml`, `.env.example`, `apps/api/sql/neon-schema.sql`.
+**Repo paths that matter:** `apps/api`, `apps/web`, `apps/web/wrangler.jsonc`, `render.yaml`, `.env.example`, `apps/api/sql/neon-schema.sql`.
 
 ---
 
@@ -18,12 +20,12 @@ End-to-end deployment for **CYVRA XCQC**: fix local/Codespace API first, then cl
 
 | Task | **You (human)** | **Cursor agent** |
 |------|-----------------|------------------|
-| Create Neon / Render / Netlify accounts | ✓ (sign up, verify email) | ✗ |
+| Create Neon / Render / Cloudflare accounts | ✓ (sign up, verify email) | ✗ |
 | Enter credit card if a platform requires it | ✓ | ✗ |
 | Paste secrets in dashboards (`DATABASE_URL`, `XCQC_INGEST_TOKEN`, `VITE_API_URL`) | ✓ | Can tell you exact names/values to use |
-| Connect GitHub repo in Render / Netlify UI | ✓ | ✗ |
+| Connect GitHub repo in Render / Cloudflare Workers UI | ✓ | ✗ |
 | Run `npm run dev:api` in Codespace | ✓ (or ask agent to run in terminal) | ✓ can run commands in workspace |
-| Edit code, docs, `render.yaml`, `netlify.toml` | optional | ✓ |
+| Edit code, docs, `render.yaml`, Workers settings | optional | ✓ |
 | Build/run Windows agent on a physical PC | ✓ | ✗ (no WMI on Linux) |
 | `git push` to trigger deploys | ✓ | Only if you explicitly ask |
 
@@ -40,7 +42,7 @@ End-to-end deployment for **CYVRA XCQC**: fix local/Codespace API first, then cl
 3. **Install/build incomplete** — `postCreateCommand` failed; shared package not built.
 4. **Port mismatch** — API defaults to `8080` (`.env.example`); Render uses `10000` (only relevant after Phase C).
 
-CORS is **not** the issue for curl to `127.0.0.1` — that is same-machine HTTP. CORS only matters when the **browser** on Netlify calls Render (Phase D); the API already uses open `cors()` middleware.
+CORS is **not** the issue for curl to `127.0.0.1` — that is same-machine HTTP. CORS only matters when the **browser** on Cloudflare Workers calls Render (Phase D); the API already uses open `cors()` middleware.
 
 ### Exact commands (Codespace or local Linux)
 
@@ -97,7 +99,7 @@ npm run dev:web
 | Module not found `@cyvra/xcqc-shared` | `npm run build:shared` from repo root |
 | `ingestAuth: false` | Normal if `XCQC_INGEST_TOKEN` empty in `.env`; set it before production |
 
-When Phase A passes, proceed to cloud deploy. You can keep using Codespace for dev; production URLs come from Render/Netlify.
+When Phase A passes, proceed to cloud deploy. You can keep using Codespace for dev; production URLs come from Render/Cloudflare Workers.
 
 ---
 
@@ -221,48 +223,52 @@ If `store` is still `memory`, check `DATABASE_URL`, SSL, and that schema was app
 
 ---
 
-## Phase D — Netlify web
+## Phase D — Cloudflare Workers web
 
-Host `apps/web` using root `netlify.toml`.
+Host `apps/web` via **Wrangler** static assets (`apps/web/wrangler.jsonc`). Full settings: [`CLOUDFLARE-WORKERS.md`](./CLOUDFLARE-WORKERS.md).
 
-### D1. Create site
+### D1. Create Worker (Git-connected build)
 
-1. [https://app.netlify.com](https://app.netlify.com) → **Add new site → Import an existing project**.
+1. [https://dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Workers** → connect Git.
 2. Connect the same GitHub repo.
-3. Netlify reads `netlify.toml`:
+3. Configure build + deploy:
 
 | Setting | Value |
 |---------|--------|
-| **Base directory** | `.` (repo root) |
+| **Root directory** | `.` (repo root) |
 | **Build command** | `npm install && npm run build -w @cyvra/xcqc-shared && npm run build -w @cyvra/xcqc-web` |
-| **Publish directory** | `apps/web/dist` |
-| **Node version** | `20` |
+| **Deploy command** | `npx wrangler deploy -c apps/web/wrangler.jsonc` |
+| **Node version** | `20` (`NODE_VERSION=20` in env or `.nvmrc`) |
+
+SPA routing: `wrangler.jsonc` → `"not_found_handling": "single-page-application"` (no custom Worker script required).
+
+Local one-shot: `npm run deploy:web` from repo root (builds shared + web, then `wrangler deploy` in `apps/web`).
 
 ### D2. Environment variables (build-time)
 
-Netlify → **Site configuration → Environment variables**:
+Set in the Cloudflare **build** environment (or export locally before `npm run build -w @cyvra/xcqc-web`):
 
 | Variable | Value |
 |----------|--------|
 | `VITE_API_URL` | `https://YOUR-SERVICE.onrender.com` (Render URL from Phase C, **no** trailing slash) |
 | `VITE_INGEST_TOKEN` | Same as Render `XCQC_INGEST_TOKEN` (only if Operator/Dashboard pages call ingest from browser) |
 
-`VITE_*` vars are baked in at **build** time. After changing them, trigger **Deploy → Clear cache and deploy site**.
+`VITE_*` vars are baked in at **build** time. After changing them, rebuild and redeploy.
 
 ### D3. How the web app calls the API
 
 - **Local dev:** `VITE_API_URL` unset → requests go to `/api` → Vite proxy → `http://127.0.0.1:8080` (`apps/web/vite.config.ts`).
-- **Netlify prod:** `VITE_API_URL` set → browser calls Render directly (`apps/web/src/auth.tsx`).
+- **Cloudflare Workers prod:** `VITE_API_URL` set → browser calls Render directly (`apps/web/src/auth.tsx`).
 
 ### D4. CORS
 
-API uses `app.use(cors())` — any origin including your `*.netlify.app` URL is allowed. No extra CORS config needed for MVP.
+API uses `app.use(cors())` — any origin including your `*.workers.dev` URL is allowed. No extra CORS config needed for MVP.
 
-If you later restrict CORS, allow your Netlify domain explicitly.
+If you later restrict CORS, allow your Cloudflare Workers domain explicitly.
 
 ### D5. Verify web
 
-1. Open `https://YOUR-SITE.netlify.app`.
+1. Open your Worker URL (`https://cyvra-xcqc-web.<account>.workers.dev` or custom domain).
 2. **Settings** page should show API base = your Render URL.
 3. Log in via demo role (left nav) — tokens `demo-super` / `demo-admin` / `demo-ops`.
 4. **Dashboard** / **Sessions** should load data from Render (may be empty until Phase E).
@@ -303,7 +309,7 @@ curl -s https://YOUR-SERVICE.onrender.com/sessions \
   -H "Authorization: Bearer YOUR-INGEST-TOKEN"
 ```
 
-Or refresh **Sessions** on the Netlify site.
+Or refresh **Sessions** on the Cloudflare Workers site.
 
 ### Electron (optional)
 
@@ -323,9 +329,9 @@ Use this after all phases:
 - [ ] **B** — Neon: schema tables exist; pooled `DATABASE_URL` saved
 - [ ] **C** — Render: `curl https://…onrender.com/health` → `"ok": true`, `"store": "neon"` (if Neon configured)
 - [ ] **C** — Render logs show `[xcqc-api] listening` with no DB connection errors
-- [ ] **D** — Netlify site loads; Settings shows correct `VITE_API_URL`
+- [ ] **D** — Cloudflare Workers site loads; Settings shows correct `VITE_API_URL`
 - [ ] **D** — Demo login works; Dashboard/Sessions API calls succeed (browser Network tab → Render, not 404)
-- [ ] **E** — Agent run completes; session appears on Render `/sessions` and Netlify Sessions page
+- [ ] **E** — Agent run completes; session appears on Render `/sessions` and Pages Sessions page
 - [ ] **Secrets** — `XCQC_INGEST_TOKEN` matches across Render, agent, and optional `VITE_INGEST_TOKEN`
 
 ---
@@ -333,7 +339,7 @@ Use this after all phases:
 ## Order of operations (summary)
 
 ```text
-A. Codespace /health  →  B. Neon + schema  →  C. Render API  →  D. Netlify web  →  E. Windows agent test
+A. Codespace /health  →  B. Neon + schema  →  C. Render API  →  D. Cloudflare Workers web  →  E. Windows agent test
 ```
 
 Do **not** skip Phase A — it confirms the API runs before you debug cloud issues.
@@ -344,6 +350,7 @@ Do **not** skip Phase A — it confirms the API runs before you debug cloud issu
 
 - [`CODESPACE-RUN.md`](./CODESPACE-RUN.md) — daily Codespace dev
 - [`NEON-SETUP.md`](./NEON-SETUP.md) — Neon details + troubleshooting
+- [`CLOUDFLARE-WORKERS.md`](./CLOUDFLARE-WORKERS.md) — Wrangler deploy, env vars, SPA assets
 - [`RENDER-DEPLOY.md`](./RENDER-DEPLOY.md) — existing Render project notes
 - [`WINDOWS-AGENT-MVP.md`](./WINDOWS-AGENT-MVP.md) — agent flags and collectors
 - [`.env.example`](../.env.example) — all env var names
