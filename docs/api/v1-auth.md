@@ -60,7 +60,33 @@ or
 
 ## CORS
 
-Set `CORS_ORIGINS` on Render (comma-separated). Defaults allow `*.workers.dev` and `*.cyvoriq.com`.
+`CORS_ORIGINS` on Render is **merged** with built-in defaults (not a replacement):
+
+- `https://cyvra-xcqc.orgaanoagrolab.workers.dev` (exact)
+- `https://*.workers.dev`
+- `https://*.cyvoriq.com`
+- `http://localhost:*` / `http://127.0.0.1:*`
+
+Set `CORS_ORIGINS` only when you need extra origins (comma-separated). Use `*` to allow all.
+
+### Health check (wake Render free tier)
+
+```bash
+curl -s https://cyvra-xcqc.onrender.com/health
+```
+
+Expect `"ok": true`. First request after sleep may take ~30s.
+
+### CORS preflight (OPTIONS)
+
+```bash
+curl -i -X OPTIONS "https://cyvra-xcqc.onrender.com/api/v1/auth/register" \
+  -H "Origin: https://cyvra-xcqc.orgaanoagrolab.workers.dev" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: content-type"
+```
+
+Expect `204` and `Access-Control-Allow-Origin` matching the Origin header.
 
 ## OTP rules
 

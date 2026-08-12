@@ -52,7 +52,13 @@ Set in the Cloudflare build environment (or locally before `npm run build -w @cy
 
 **L2 customer auth routes** (same Worker for now): `/account/register`, `/account/login`, `/account/verify`. Rebuild after `VITE_API_URL` changes.
 
-**Render CORS:** set `CORS_ORIGINS` to your Worker URL (e.g. `https://cyvra-xcqc.<account>.workers.dev`) plus future `https://*.cyvoriq.com` subdomain. Defaults cover `*.workers.dev` and `*.cyvoriq.com` if unset.
+**Render CORS:** `CORS_ORIGINS` is merged with defaults (`*.workers.dev`, `*.cyvoriq.com`, localhost). Set explicitly if needed:
+
+```
+CORS_ORIGINS=https://cyvra-xcqc.orgaanoagrolab.workers.dev
+```
+
+Also set `JWT_SECRET`, `OTP_PEPPER`, `OTP_DEV_MODE=true` for L2 auth. Wake API: `curl -s https://cyvra-xcqc.onrender.com/health` — see `docs/api/v1-auth.md`.
 
 **Planned production domain:** subdomain of **cyvoriq.com** (document only — no DNS in repo). `cyvoriq.in` deferred.
 

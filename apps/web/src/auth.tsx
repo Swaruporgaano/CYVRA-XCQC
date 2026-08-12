@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { formatFetchError } from "./api-errors";
 
 export type DemoRole = "PLATFORM_SUPER" | "TENANT_ADMIN" | "OPERATOR";
 
@@ -34,9 +35,14 @@ export function useAuth() {
 }
 
 export async function apiGet<T>(path: string, token: string, apiBase: string): Promise<T> {
-  const res = await fetch(`${apiBase}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${apiBase}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (err) {
+    throw new Error(formatFetchError(err, apiBase));
+  }
   if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
   return res.json() as Promise<T>;
 }
@@ -47,14 +53,19 @@ export async function apiPost<T>(
   apiBase: string,
   body?: unknown,
 ): Promise<T> {
-  const res = await fetch(`${apiBase}${path}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${apiBase}${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch (err) {
+    throw new Error(formatFetchError(err, apiBase));
+  }
   if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
   return res.json() as Promise<T>;
 }

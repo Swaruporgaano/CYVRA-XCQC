@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatFetchError } from "../api-errors";
 import { apiGet, useAuth } from "../auth";
 
 export function DashboardPage() {
@@ -26,7 +27,7 @@ export function DashboardPage() {
           setCerts(c.count ?? 0);
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        if (!cancelled) setError(formatFetchError(e, apiBase));
       }
     })();
     return () => {
@@ -45,7 +46,11 @@ export function DashboardPage() {
         <div className="panel">
           <strong>API unreachable</strong>
           <p className="lede">{error}</p>
-          <p className="lede">Start API with <code>npm run dev:api</code> then refresh.</p>
+          {!import.meta.env.PROD && (
+            <p className="lede">
+              Local dev: start API with <code>npm run dev:api</code> then refresh.
+            </p>
+          )}
         </div>
       )}
       <div className="grid">

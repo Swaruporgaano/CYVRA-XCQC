@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatFetchError } from "../api-errors";
 import { useAuth } from "../auth";
 
 interface SessionRow {
@@ -24,7 +25,7 @@ export function SessionsPage() {
         return r.json();
       })
       .then((d) => setRows(d.sessions ?? []))
-      .catch((e) => setError(String(e)));
+      .catch((e) => setError(formatFetchError(e, apiBase)));
   }, [apiBase]);
 
   return (

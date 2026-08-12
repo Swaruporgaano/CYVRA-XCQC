@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { formatFetchError } from "./api-errors";
 
 const STORAGE_KEY = "xcqc_customer_token";
 
@@ -92,14 +93,19 @@ export async function customerApiPost<T>(
   body: unknown,
   token?: string | null,
 ): Promise<T> {
-  const res = await fetch(`${apiBase}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${apiBase}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    throw new Error(formatFetchError(err, apiBase));
+  }
   const text = await res.text();
   let data: unknown = {};
   try {
@@ -115,9 +121,14 @@ export async function customerApiPost<T>(
 }
 
 export async function customerApiGet<T>(path: string, apiBase: string, token: string): Promise<T> {
-  const res = await fetch(`${apiBase}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${apiBase}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (err) {
+    throw new Error(formatFetchError(err, apiBase));
+  }
   if (!res.ok) throw new Error(`${res.status}`);
   return res.json() as Promise<T>;
 }

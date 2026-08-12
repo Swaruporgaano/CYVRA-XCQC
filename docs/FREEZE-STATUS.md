@@ -83,12 +83,12 @@
 - [x] `POST /api/v1/auth/register`, `request-otp`, `verify-otp`, `login`, `GET /me`
 - [x] OTP hashing (`OTP_PEPPER`), rate limits, console/dev OTP (`OTP_DEV_MODE`)
 - [x] Neon + memory store for `customers` / `otp_transactions`
-- [x] CORS: `*.workers.dev`, `*.cyvoriq.com` (configurable `CORS_ORIGINS`)
+- [x] CORS: merge env + defaults (`*.workers.dev`, `*.cyvoriq.com`, ops Worker exact origin); OPTIONS preflight
 - [x] Web UI: `/account/register`, `/account/login`, `/account/verify`, `/account`
 - [x] Settings banner: future **cyvoriq.com** subdomain (DNS not in repo); **cyvoriq.in** deferred
 - [x] `docs/api/v1-auth.md`
-- [ ] Render env live: `JWT_SECRET`, `OTP_PEPPER`, `OTP_DEV_MODE=true`
-- [ ] User verifies Cloudflare → Register/Login/OTP E2E against Render API
+- [ ] Render env live: `JWT_SECRET`, `OTP_PEPPER`, `OTP_DEV_MODE=true`, `CORS_ORIGINS` (optional — defaults cover Worker)
+- [ ] User verifies Cloudflare → Register/Login/OTP E2E against Render API (`curl /health` first to wake free tier)
 
 ### L3 — License + download + activate API
 
@@ -148,9 +148,9 @@
 
 ## NEXT (immediate)
 
-1. **Render** — Set `JWT_SECRET`, `OTP_PEPPER`, `OTP_DEV_MODE=true`; redeploy API.
+1. **Render** — Set `JWT_SECRET`, `OTP_PEPPER`, `OTP_DEV_MODE=true`; optional `CORS_ORIGINS=https://cyvra-xcqc.orgaanoagrolab.workers.dev`; `curl /health` to wake; redeploy API.
 2. **Neon** — Apply L1 migration if not done (`neon-schema-l1-commercial.sql`).
-3. **Cloudflare** — Rebuild Worker after push; test `/account/register` → OTP → logged in.
+3. **Cloudflare** — Confirm `VITE_API_URL=https://cyvra-xcqc.onrender.com`; rebuild Worker after push; test `/account/register` → OTP.
 4. **L3** — License keys + download/activate API (next phase).
 
 ---
@@ -166,4 +166,4 @@ Do not skip step 1. L1 is forward-only; no drops of session tables.
 
 ---
 
-*Updated 2026-08-12 — L2 auth shipped in repo.*
+*Updated 2026-08-12 — L2 CORS fix for Cloudflare Workers → Render.*
