@@ -1,7 +1,6 @@
-import cors from "cors";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
-import { buildCorsOptions } from "./lib/cors.js";
+import { createCorsMiddleware } from "./lib/cors.js";
 import { createSeedState } from "./store/appState.js";
 import { createCommercialStore } from "./store/commercial.js";
 import { createSessionStore, getPgPool, isNeonConfigured } from "./store/neon.js";
@@ -34,7 +33,7 @@ export async function createApp() {
   const { store: commercialStore, mode: commercialMode } = await createCommercialStore();
   const state = createSeedState();
 
-  app.use(cors(buildCorsOptions()));
+  app.use(createCorsMiddleware());
   app.use(express.json({ limit: "5mb" }));
 
   app.get("/health", async (_req, res) => {
