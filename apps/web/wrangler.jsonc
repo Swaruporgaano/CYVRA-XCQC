@@ -1,6 +1,6 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "cyvra-xcqc-web",
+  "name": "cyvra-xcqc",
   "compatibility_date": "2026-08-12",
   "assets": {
     "directory": "./dist",

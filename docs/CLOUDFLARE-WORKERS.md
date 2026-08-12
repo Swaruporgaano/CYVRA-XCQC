@@ -52,6 +52,10 @@ Set in the Cloudflare build environment (or locally before `npm run build -w @cy
 
 `VITE_*` values are baked in at **build** time. After changing them, rebuild and redeploy.
 
+## Worker name
+
+`apps/web/wrangler.jsonc` `"name"` must match the Cloudflare Workers project (e.g. `cyvra-xcqc`). A mismatch triggers CI warnings and can deploy to the wrong Worker.
+
 ## SPA routing
 
 `apps/web/wrangler.jsonc` sets:
@@ -60,7 +64,7 @@ Set in the Cloudflare build environment (or locally before `npm run build -w @cy
 "not_found_handling": "single-page-application"
 ```
 
-This serves `index.html` for unknown paths (client-side React Router). `apps/web/public/_redirects` is optional (Netlify legacy); Workers assets config covers SPA behavior.
+This serves `index.html` for unknown paths (client-side React Router). **Do not** add `apps/web/public/_redirects` with `/* /index.html 200` — that is Netlify/Pages syntax and conflicts with Workers assets SPA handling (infinite redirect loop, error `100324`).
 
 ## Local smoke test (build only)
 
@@ -83,6 +87,8 @@ Preview locally with Vite: `npm run dev:web` (proxies `/api` → local Render).
 | `dist` missing on deploy | Run shared + web build before `wrangler deploy` |
 | API calls fail in browser | Fix `VITE_API_URL` → rebuild and redeploy |
 | 404 on client routes | Confirm `not_found_handling: single-page-application` in `wrangler.jsonc` |
+| `Invalid _redirects` / infinite loop `100324` | Remove `apps/web/public/_redirects`; SPA is handled by `wrangler.jsonc` assets config |
+| Worker name mismatch warning | Set `"name"` in `wrangler.jsonc` to match the Cloudflare project |
 
 ## Related
 
