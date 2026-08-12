@@ -41,7 +41,38 @@ export interface DeviceRecord {
   customerId: string;
   manufacturer?: string | null;
   model?: string | null;
+  serialHash?: string | null;
+  uuidHash?: string | null;
   deviceFingerprint: string;
   firstSeenAt: string;
   lastSeenAt: string;
+}
+
+export interface DownloadTokenRecord {
+  id: string;
+  customerId: string;
+  licenseId: string;
+  tokenHash: string;
+  expiresAt: string;
+  consumedAt?: string | null;
+  createdAt: string;
+}
+
+export interface AgentActivationRecord {
+  id: string;
+  customerId: string;
+  licenseId: string;
+  deviceId: string;
+  agentVersion?: string | null;
+  status: AgentActivationStatus;
+  activatedAt: string;
+  lastSeenAt?: string | null;
+}
+
+export interface AuditLogRecord {
+  id: string;
+  customerId?: string | null;
+  event: string;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
 }

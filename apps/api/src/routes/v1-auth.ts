@@ -132,7 +132,7 @@ export function createV1AuthRouter(store: CommercialStore): Router {
     res.json({
       version: "v1",
       status: "live",
-      phase: "L2",
+      phase: "L3",
       auth: [
         "POST /api/v1/auth/register",
         "POST /api/v1/auth/request-otp",
@@ -140,7 +140,14 @@ export function createV1AuthRouter(store: CommercialStore): Router {
         "POST /api/v1/auth/login",
         "GET /api/v1/auth/me",
       ],
-      license: "L3 — not implemented",
+      license: [
+        "GET /api/v1/license/status",
+        "POST /api/v1/license/issue",
+        "POST /api/v1/license/download-authorize",
+        "GET /api/v1/license/download",
+        "POST /api/v1/license/activate",
+      ],
+      agent: ["POST /api/v1/agent/bootstrap", "POST /api/v1/agent/heartbeat"],
     });
   });
 

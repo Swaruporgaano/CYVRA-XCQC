@@ -10,21 +10,38 @@ import { createTenantsRouter } from "./routes/tenants.js";
 import { createLicensesRouter } from "./routes/licenses.js";
 import { createCertificatesRouter } from "./routes/certificates.js";
 import { createV1AuthRouter } from "./routes/v1-auth.js";
+import { createV1LicenseRouter } from "./routes/v1-license.js";
+import { createV1AgentRouter } from "./routes/v1-agent.js";
+import { deviceFromAuthHeader } from "./lib/device-jwt.js";
 
 function ingestAuth(req: Request, res: Response, next: NextFunction): void {
   const expected = process.env.XCQC_INGEST_TOKEN;
+  const jwtSecret = process.env.JWT_SECRET?.trim();
+  const allowDeviceJwt = process.env.XCQC_DEVICE_JWT_INGEST !== "0";
+
+  const header = req.header("authorization") ?? "";
+  const bearer = header.startsWith("Bearer ") ? header.slice(7) : "";
+  const alt = req.header("x-xcqc-ingest-token") ?? "";
+
+  if (expected && (bearer === expected || alt === expected)) {
+    next();
+    return;
+  }
+
+  if (allowDeviceJwt && jwtSecret && bearer) {
+    const device = deviceFromAuthHeader(header, jwtSecret);
+    if (device) {
+      next();
+      return;
+    }
+  }
+
   if (!expected) {
     next();
     return;
   }
-  const header = req.header("authorization") ?? "";
-  const bearer = header.startsWith("Bearer ") ? header.slice(7) : "";
-  const alt = req.header("x-xcqc-ingest-token") ?? "";
-  if (bearer === expected || alt === expected) {
-    next();
-    return;
-  }
-  res.status(401).json({ error: "unauthorized", message: "Invalid or missing ingest token" });
+
+  res.status(401).json({ error: "unauthorized", message: "Invalid or missing ingest token or device JWT" });
 }
 
 export async function createApp() {
@@ -62,8 +79,11 @@ export async function createApp() {
       neonReachable,
       ingestAuth: Boolean(process.env.XCQC_INGEST_TOKEN),
       authConfigured: Boolean(process.env.JWT_SECRET && process.env.OTP_PEPPER),
+      licenseConfigured: Boolean(process.env.JWT_SECRET && process.env.LICENSE_PEPPER),
       otpDevMode: process.env.OTP_DEV_MODE === "true" || process.env.SMS_PROVIDER === "console",
-      phase: "L2",
+      licenseDevMode: process.env.LICENSE_DEV_MODE === "true",
+      deviceJwtIngest: process.env.XCQC_DEVICE_JWT_INGEST !== "0",
+      phase: "L3",
     });
   });
 
@@ -94,6 +114,13 @@ export async function createApp() {
         "POST /api/v1/auth/verify-otp",
         "POST /api/v1/auth/login",
         "GET /api/v1/auth/me",
+        "GET /api/v1/license/status",
+        "POST /api/v1/license/issue",
+        "POST /api/v1/license/download-authorize",
+        "GET /api/v1/license/download",
+        "POST /api/v1/license/activate",
+        "POST /api/v1/agent/bootstrap",
+        "POST /api/v1/agent/heartbeat",
       ],
     });
   });
@@ -104,6 +131,8 @@ export async function createApp() {
   app.use("/sessions", ingestAuth, createSessionRouter(store));
   app.use("/certificates", createCertificatesRouter(store, state));
   app.use("/api/v1", createV1AuthRouter(commercialStore));
+  app.use("/api/v1", createV1LicenseRouter(commercialStore));
+  app.use("/api/v1", createV1AgentRouter(commercialStore));
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err);

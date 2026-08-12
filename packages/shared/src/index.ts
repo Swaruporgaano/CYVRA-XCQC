@@ -354,3 +354,56 @@ export interface CertificateStub {
 export function roleAtLeast(role: AdminRole, minimum: AdminRole): boolean {
   return ROLE_RANK[role] >= ROLE_RANK[minimum];
 }
+
+/** L3 — commercial license API DTOs (customer portal + Electron). */
+export type LicenseKeyStatus = "available" | "activated" | "revoked";
+
+export interface LicenseSummary {
+  id: string;
+  keyLast4: string;
+  status: LicenseKeyStatus;
+  createdAt: string;
+  activatedAt?: string | null;
+}
+
+export interface ActivationSummary {
+  id: string;
+  status: "active" | "revoked" | "suspended";
+  deviceId: string;
+  activatedAt: string;
+  lastSeenAt?: string | null;
+}
+
+export interface LicenseStatusResponse {
+  licenses: Array<LicenseSummary & { activation?: ActivationSummary | null }>;
+  policy: "SAME_DEVICE";
+  downloadTokenTtlMinutes: number;
+}
+
+export interface DeviceFingerprintInput {
+  manufacturer?: string | null;
+  model?: string | null;
+  chassisSerial?: string | null;
+  baseboardSerial?: string | null;
+  systemUuid?: string | null;
+  cpuId?: string | null;
+  diskSerial?: string | null;
+}
+
+export interface ActivateLicenseRequest {
+  mobile: string;
+  licenseKey: string;
+  otp: string;
+  otpId?: string;
+  fingerprint: DeviceFingerprintInput;
+  agentVersion?: string;
+}
+
+export interface ActivateLicenseResponse {
+  activation: ActivationSummary;
+  device: { id: string; fingerprint: string };
+  deviceToken: string;
+  refreshToken: string;
+  reactivated?: boolean;
+  message?: string;
+}

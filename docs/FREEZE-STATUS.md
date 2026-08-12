@@ -48,6 +48,7 @@
 | Neon store adapter | Done | `NeonSessionStore` with memory/file fallback |
 | L2 commercial auth API | Done | `/api/v1/auth/*`, JWT, OTP, Neon/memory store |
 | L2 customer auth web UI | Done | `/account/*` routes on `apps/web` Worker |
+| L3 license lifecycle API | Done | `/api/v1/license/*`, device JWT ingest, `/account` licenses UI |
 | Doc review | Done | `DOC-REVIEW-FINDINGS.md`, Word doc extraction |
 | Gap bridge plan | Done | `GAP-BRIDGE-PLAN.md` (phased route P0 → R1) |
 | Accounts linked | Done | Neon, Render, Cloudflare Workers connected to repo (verify P0) |
@@ -90,14 +91,17 @@
 - [ ] Render env live: `JWT_SECRET`, `OTP_PEPPER`, `OTP_DEV_MODE=true`, `CORS_ORIGINS` (optional — defaults cover Worker)
 - [ ] User verifies Cloudflare → Register/Login/OTP E2E against Render API (`curl /health` first to wake free tier)
 
-### L3 — License + download + activate API
+### L3 — License + download + activate API (DONE in repo — verify on Render)
 
-- [ ] License state machine (`AVAILABLE` → `ACTIVATED`)
-- [ ] Download token (15 min, single-use)
-- [ ] Device fingerprint + `SAME_DEVICE` binding
-- [ ] `POST /api/v1/license/*`, `/api/v1/agent/bootstrap`, `heartbeat`
-- [ ] Legacy `/sessions` accepts ingest token OR device JWT (feature flag)
-- [ ] Render env: `LICENSE_PEPPER`
+- [x] License state machine (`available` → `activated`)
+- [x] Download token (15 min, single-use)
+- [x] Device fingerprint + `SAME_DEVICE` binding
+- [x] `POST /api/v1/license/*`, `/api/v1/agent/bootstrap`, `heartbeat`
+- [x] Legacy `/sessions` accepts ingest token OR device JWT (`XCQC_DEVICE_JWT_INGEST`)
+- [x] Web UI: `/account` licenses section (issue, download, activation status)
+- [x] `docs/api/v1-licenses.md`
+- [ ] Render env live: `LICENSE_PEPPER`, `LICENSE_DEV_MODE=true`
+- [ ] User verifies license E2E on Cloudflare Worker `/account`
 
 ### L4 — Customer portal
 
@@ -148,10 +152,9 @@
 
 ## NEXT (immediate)
 
-1. **Render** — Set `JWT_SECRET`, `OTP_PEPPER`, `OTP_DEV_MODE=true`; optional `CORS_ORIGINS=https://cyvra-xcqc.orgaanoagrolab.workers.dev`; `curl /health` to wake; redeploy API.
-2. **Neon** — Apply L1 migration if not done (`neon-schema-l1-commercial.sql`).
-3. **Cloudflare** — Confirm `VITE_API_URL=https://cyvra-xcqc.onrender.com`; rebuild Worker after push; test `/account/register` → OTP.
-4. **L3** — License keys + download/activate API (next phase).
+1. **Render** — Set `LICENSE_PEPPER`, `LICENSE_DEV_MODE=true` (with existing `JWT_SECRET`, `OTP_PEPPER`); redeploy API.
+2. **Cloudflare** — Rebuild Worker after push; test `/account` → issue key → authorize download.
+3. **L4** — Customer portal (`apps/web-portal`) or **L5** — Electron auth UI (per plan).
 
 ---
 
@@ -166,4 +169,4 @@ Do not skip step 1. L1 is forward-only; no drops of session tables.
 
 ---
 
-*Updated 2026-08-12 — L2 CORS fix for Cloudflare Workers → Render.*
+*Updated 2026-08-12 — L3 license lifecycle API + customer /account licenses UI.*

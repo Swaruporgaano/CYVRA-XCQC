@@ -15,7 +15,10 @@ export function LicensesPage() {
   return (
     <>
       <h1>Licenses</h1>
-      <p className="lede">Credits are server-metered. Never trust client-submitted balances.</p>
+      <p className="lede">
+        Operator tenant credits (lab metering). Customer 16-digit keys and device activation are at{" "}
+        <a href="/account">/account</a> (L3 customer flow).
+      </p>
       {error && <div className="panel">{error}</div>}
       {license && (
         <div className="grid">

@@ -1,6 +1,16 @@
 import { randomUUID } from "node:crypto";
 import type pg from "pg";
-import type { CustomerRecord, CustomerStatus } from "../types/commercial.js";
+import type {
+  AgentActivationRecord,
+  AgentActivationStatus,
+  AuditLogRecord,
+  CustomerRecord,
+  CustomerStatus,
+  DeviceRecord,
+  DownloadTokenRecord,
+  LicenseKeyRecord,
+  LicenseKeyStatus,
+} from "../types/commercial.js";
 import { getPgPool, isNeonConfigured } from "./neon.js";
 
 export interface OtpTransaction {
@@ -31,6 +41,56 @@ export interface CommercialStore {
   incrementOtpAttempts(id: string): Promise<OtpTransaction | undefined>;
   markOtpUsed(id: string): Promise<void>;
   countRecentOtpRequests(mobile: string, since: Date): Promise<number>;
+
+  listLicensesByCustomer(customerId: string): Promise<LicenseKeyRecord[]>;
+  createLicenseKey(
+    customerId: string,
+    keyHash: string,
+    keyLast4: string,
+  ): Promise<LicenseKeyRecord>;
+  findLicenseById(id: string): Promise<LicenseKeyRecord | undefined>;
+  findLicenseByHash(keyHash: string): Promise<LicenseKeyRecord | undefined>;
+  updateLicenseStatus(
+    id: string,
+    status: LicenseKeyStatus,
+    activatedAt?: Date,
+  ): Promise<LicenseKeyRecord | undefined>;
+
+  createDownloadToken(
+    customerId: string,
+    licenseId: string,
+    tokenHash: string,
+    expiresAt: Date,
+  ): Promise<DownloadTokenRecord>;
+  findDownloadTokenByHash(tokenHash: string): Promise<DownloadTokenRecord | undefined>;
+  consumeDownloadToken(id: string): Promise<void>;
+
+  findDeviceByFingerprint(fingerprint: string): Promise<DeviceRecord | undefined>;
+  createDevice(input: {
+    customerId: string;
+    manufacturer?: string | null;
+    model?: string | null;
+    serialHash?: string | null;
+    uuidHash?: string | null;
+    deviceFingerprint: string;
+  }): Promise<DeviceRecord>;
+  touchDevice(id: string): Promise<void>;
+
+  findActivationByLicense(licenseId: string): Promise<AgentActivationRecord | undefined>;
+  findActivationByDevice(deviceId: string): Promise<AgentActivationRecord | undefined>;
+  createAgentActivation(input: {
+    customerId: string;
+    licenseId: string;
+    deviceId: string;
+    agentVersion?: string | null;
+  }): Promise<AgentActivationRecord>;
+  updateActivationLastSeen(id: string): Promise<void>;
+
+  createAuditLog(input: {
+    customerId?: string | null;
+    event: string;
+    metadata?: Record<string, unknown> | null;
+  }): Promise<AuditLogRecord>;
 }
 
 function rowToCustomer(row: {
@@ -71,11 +131,106 @@ function rowToOtp(row: {
   };
 }
 
+function rowToLicense(row: {
+  id: string;
+  customer_id: string;
+  key_hash: string;
+  key_last4: string;
+  status: string;
+  created_at: Date;
+  activated_at: Date | null;
+}): LicenseKeyRecord {
+  return {
+    id: row.id,
+    customerId: row.customer_id,
+    keyHash: row.key_hash,
+    keyLast4: row.key_last4,
+    status: row.status as LicenseKeyStatus,
+    createdAt: row.created_at.toISOString(),
+    activatedAt: row.activated_at?.toISOString() ?? null,
+  };
+}
+
+function rowToDownloadToken(row: {
+  id: string;
+  customer_id: string;
+  license_id: string;
+  token_hash: string;
+  expires_at: Date;
+  consumed_at: Date | null;
+  created_at: Date;
+}): DownloadTokenRecord {
+  return {
+    id: row.id,
+    customerId: row.customer_id,
+    licenseId: row.license_id,
+    tokenHash: row.token_hash,
+    expiresAt: row.expires_at.toISOString(),
+    consumedAt: row.consumed_at?.toISOString() ?? null,
+    createdAt: row.created_at.toISOString(),
+  };
+}
+
+function rowToDevice(row: {
+  id: string;
+  customer_id: string;
+  manufacturer: string | null;
+  model: string | null;
+  serial_hash: string | null;
+  uuid_hash: string | null;
+  device_fingerprint: string;
+  first_seen_at: Date;
+  last_seen_at: Date;
+}): DeviceRecord {
+  return {
+    id: row.id,
+    customerId: row.customer_id,
+    manufacturer: row.manufacturer,
+    model: row.model,
+    serialHash: row.serial_hash,
+    uuidHash: row.uuid_hash,
+    deviceFingerprint: row.device_fingerprint,
+    firstSeenAt: row.first_seen_at.toISOString(),
+    lastSeenAt: row.last_seen_at.toISOString(),
+  };
+}
+
+function rowToActivation(row: {
+  id: string;
+  customer_id: string;
+  license_id: string;
+  device_id: string;
+  agent_version: string | null;
+  status: string;
+  activated_at: Date;
+  last_seen_at: Date | null;
+}): AgentActivationRecord {
+  return {
+    id: row.id,
+    customerId: row.customer_id,
+    licenseId: row.license_id,
+    deviceId: row.device_id,
+    agentVersion: row.agent_version,
+    status: row.status as AgentActivationStatus,
+    activatedAt: row.activated_at.toISOString(),
+    lastSeenAt: row.last_seen_at?.toISOString() ?? null,
+  };
+}
+
 export class MemoryCommercialStore implements CommercialStore {
   private customers = new Map<string, CustomerRecord>();
   private customersByMobile = new Map<string, string>();
   private customersByEmail = new Map<string, string>();
   private otps = new Map<string, OtpTransaction>();
+  private licenses = new Map<string, LicenseKeyRecord>();
+  private licensesByHash = new Map<string, string>();
+  private downloadTokens = new Map<string, DownloadTokenRecord>();
+  private downloadTokensByHash = new Map<string, string>();
+  private devices = new Map<string, DeviceRecord>();
+  private devicesByFingerprint = new Map<string, string>();
+  private activations = new Map<string, AgentActivationRecord>();
+  private activationsByLicense = new Map<string, string>();
+  private auditLogs: AuditLogRecord[] = [];
 
   async ping(): Promise<void> {}
 
@@ -163,6 +318,176 @@ export class MemoryCommercialStore implements CommercialStore {
     return [...this.otps.values()].filter(
       (t) => t.mobile === mobile && t.createdAt.getTime() >= since.getTime(),
     ).length;
+  }
+
+  async listLicensesByCustomer(customerId: string): Promise<LicenseKeyRecord[]> {
+    return [...this.licenses.values()]
+      .filter((l) => l.customerId === customerId)
+      .map((l) => structuredClone(l));
+  }
+
+  async createLicenseKey(
+    customerId: string,
+    keyHash: string,
+    keyLast4: string,
+  ): Promise<LicenseKeyRecord> {
+    const record: LicenseKeyRecord = {
+      id: randomUUID(),
+      customerId,
+      keyHash,
+      keyLast4,
+      status: "available",
+      createdAt: new Date().toISOString(),
+      activatedAt: null,
+    };
+    this.licenses.set(record.id, record);
+    this.licensesByHash.set(keyHash, record.id);
+    return structuredClone(record);
+  }
+
+  async findLicenseById(id: string): Promise<LicenseKeyRecord | undefined> {
+    const l = this.licenses.get(id);
+    return l ? structuredClone(l) : undefined;
+  }
+
+  async findLicenseByHash(keyHash: string): Promise<LicenseKeyRecord | undefined> {
+    const id = this.licensesByHash.get(keyHash);
+    return id ? this.findLicenseById(id) : undefined;
+  }
+
+  async updateLicenseStatus(
+    id: string,
+    status: LicenseKeyStatus,
+    activatedAt?: Date,
+  ): Promise<LicenseKeyRecord | undefined> {
+    const current = this.licenses.get(id);
+    if (!current) return undefined;
+    const updated: LicenseKeyRecord = {
+      ...current,
+      status,
+      activatedAt: activatedAt?.toISOString() ?? current.activatedAt,
+    };
+    this.licenses.set(id, updated);
+    return structuredClone(updated);
+  }
+
+  async createDownloadToken(
+    customerId: string,
+    licenseId: string,
+    tokenHash: string,
+    expiresAt: Date,
+  ): Promise<DownloadTokenRecord> {
+    const record: DownloadTokenRecord = {
+      id: randomUUID(),
+      customerId,
+      licenseId,
+      tokenHash,
+      expiresAt: expiresAt.toISOString(),
+      consumedAt: null,
+      createdAt: new Date().toISOString(),
+    };
+    this.downloadTokens.set(record.id, record);
+    this.downloadTokensByHash.set(tokenHash, record.id);
+    return structuredClone(record);
+  }
+
+  async findDownloadTokenByHash(tokenHash: string): Promise<DownloadTokenRecord | undefined> {
+    const id = this.downloadTokensByHash.get(tokenHash);
+    const t = id ? this.downloadTokens.get(id) : undefined;
+    return t ? structuredClone(t) : undefined;
+  }
+
+  async consumeDownloadToken(id: string): Promise<void> {
+    const t = this.downloadTokens.get(id);
+    if (t) t.consumedAt = new Date().toISOString();
+  }
+
+  async findDeviceByFingerprint(fingerprint: string): Promise<DeviceRecord | undefined> {
+    const id = this.devicesByFingerprint.get(fingerprint);
+    const d = id ? this.devices.get(id) : undefined;
+    return d ? structuredClone(d) : undefined;
+  }
+
+  async createDevice(input: {
+    customerId: string;
+    manufacturer?: string | null;
+    model?: string | null;
+    serialHash?: string | null;
+    uuidHash?: string | null;
+    deviceFingerprint: string;
+  }): Promise<DeviceRecord> {
+    const now = new Date().toISOString();
+    const record: DeviceRecord = {
+      id: randomUUID(),
+      customerId: input.customerId,
+      manufacturer: input.manufacturer ?? null,
+      model: input.model ?? null,
+      serialHash: input.serialHash ?? null,
+      uuidHash: input.uuidHash ?? null,
+      deviceFingerprint: input.deviceFingerprint,
+      firstSeenAt: now,
+      lastSeenAt: now,
+    };
+    this.devices.set(record.id, record);
+    this.devicesByFingerprint.set(record.deviceFingerprint, record.id);
+    return structuredClone(record);
+  }
+
+  async touchDevice(id: string): Promise<void> {
+    const d = this.devices.get(id);
+    if (d) d.lastSeenAt = new Date().toISOString();
+  }
+
+  async findActivationByLicense(licenseId: string): Promise<AgentActivationRecord | undefined> {
+    const id = this.activationsByLicense.get(licenseId);
+    const a = id ? this.activations.get(id) : undefined;
+    return a ? structuredClone(a) : undefined;
+  }
+
+  async findActivationByDevice(deviceId: string): Promise<AgentActivationRecord | undefined> {
+    return [...this.activations.values()].find((a) => a.deviceId === deviceId);
+  }
+
+  async createAgentActivation(input: {
+    customerId: string;
+    licenseId: string;
+    deviceId: string;
+    agentVersion?: string | null;
+  }): Promise<AgentActivationRecord> {
+    const record: AgentActivationRecord = {
+      id: randomUUID(),
+      customerId: input.customerId,
+      licenseId: input.licenseId,
+      deviceId: input.deviceId,
+      agentVersion: input.agentVersion ?? null,
+      status: "active",
+      activatedAt: new Date().toISOString(),
+      lastSeenAt: new Date().toISOString(),
+    };
+    this.activations.set(record.id, record);
+    this.activationsByLicense.set(input.licenseId, record.id);
+    return structuredClone(record);
+  }
+
+  async updateActivationLastSeen(id: string): Promise<void> {
+    const a = this.activations.get(id);
+    if (a) a.lastSeenAt = new Date().toISOString();
+  }
+
+  async createAuditLog(input: {
+    customerId?: string | null;
+    event: string;
+    metadata?: Record<string, unknown> | null;
+  }): Promise<AuditLogRecord> {
+    const record: AuditLogRecord = {
+      id: randomUUID(),
+      customerId: input.customerId ?? null,
+      event: input.event,
+      metadata: input.metadata ?? null,
+      createdAt: new Date().toISOString(),
+    };
+    this.auditLogs.push(record);
+    return structuredClone(record);
   }
 }
 
@@ -278,6 +603,195 @@ export class NeonCommercialStore implements CommercialStore {
       [mobile, since],
     );
     return res.rows[0]?.c ?? 0;
+  }
+
+  async listLicensesByCustomer(customerId: string): Promise<LicenseKeyRecord[]> {
+    const res = await this.db.query(
+      `SELECT id, customer_id, key_hash, key_last4, status, created_at, activated_at
+       FROM license_keys WHERE customer_id = $1::uuid ORDER BY created_at DESC`,
+      [customerId],
+    );
+    return res.rows.map(rowToLicense);
+  }
+
+  async createLicenseKey(
+    customerId: string,
+    keyHash: string,
+    keyLast4: string,
+  ): Promise<LicenseKeyRecord> {
+    const res = await this.db.query(
+      `INSERT INTO license_keys (customer_id, key_hash, key_last4)
+       VALUES ($1::uuid, $2, $3)
+       RETURNING id, customer_id, key_hash, key_last4, status, created_at, activated_at`,
+      [customerId, keyHash, keyLast4],
+    );
+    return rowToLicense(res.rows[0]!);
+  }
+
+  async findLicenseById(id: string): Promise<LicenseKeyRecord | undefined> {
+    const res = await this.db.query(
+      `SELECT id, customer_id, key_hash, key_last4, status, created_at, activated_at
+       FROM license_keys WHERE id = $1::uuid`,
+      [id],
+    );
+    if (res.rowCount === 0) return undefined;
+    return rowToLicense(res.rows[0]!);
+  }
+
+  async findLicenseByHash(keyHash: string): Promise<LicenseKeyRecord | undefined> {
+    const res = await this.db.query(
+      `SELECT id, customer_id, key_hash, key_last4, status, created_at, activated_at
+       FROM license_keys WHERE key_hash = $1`,
+      [keyHash],
+    );
+    if (res.rowCount === 0) return undefined;
+    return rowToLicense(res.rows[0]!);
+  }
+
+  async updateLicenseStatus(
+    id: string,
+    status: LicenseKeyStatus,
+    activatedAt?: Date,
+  ): Promise<LicenseKeyRecord | undefined> {
+    const res = await this.db.query(
+      `UPDATE license_keys SET status = $2, activated_at = COALESCE($3, activated_at)
+       WHERE id = $1::uuid
+       RETURNING id, customer_id, key_hash, key_last4, status, created_at, activated_at`,
+      [id, status, activatedAt ?? null],
+    );
+    if (res.rowCount === 0) return undefined;
+    return rowToLicense(res.rows[0]!);
+  }
+
+  async createDownloadToken(
+    customerId: string,
+    licenseId: string,
+    tokenHash: string,
+    expiresAt: Date,
+  ): Promise<DownloadTokenRecord> {
+    const res = await this.db.query(
+      `INSERT INTO download_tokens (customer_id, license_id, token_hash, expires_at)
+       VALUES ($1::uuid, $2::uuid, $3, $4)
+       RETURNING id, customer_id, license_id, token_hash, expires_at, consumed_at, created_at`,
+      [customerId, licenseId, tokenHash, expiresAt],
+    );
+    return rowToDownloadToken(res.rows[0]!);
+  }
+
+  async findDownloadTokenByHash(tokenHash: string): Promise<DownloadTokenRecord | undefined> {
+    const res = await this.db.query(
+      `SELECT id, customer_id, license_id, token_hash, expires_at, consumed_at, created_at
+       FROM download_tokens WHERE token_hash = $1`,
+      [tokenHash],
+    );
+    if (res.rowCount === 0) return undefined;
+    return rowToDownloadToken(res.rows[0]!);
+  }
+
+  async consumeDownloadToken(id: string): Promise<void> {
+    await this.db.query(`UPDATE download_tokens SET consumed_at = now() WHERE id = $1::uuid`, [id]);
+  }
+
+  async findDeviceByFingerprint(fingerprint: string): Promise<DeviceRecord | undefined> {
+    const res = await this.db.query(
+      `SELECT id, customer_id, manufacturer, model, serial_hash, uuid_hash, device_fingerprint,
+              first_seen_at, last_seen_at
+       FROM devices WHERE device_fingerprint = $1`,
+      [fingerprint],
+    );
+    if (res.rowCount === 0) return undefined;
+    return rowToDevice(res.rows[0]!);
+  }
+
+  async createDevice(input: {
+    customerId: string;
+    manufacturer?: string | null;
+    model?: string | null;
+    serialHash?: string | null;
+    uuidHash?: string | null;
+    deviceFingerprint: string;
+  }): Promise<DeviceRecord> {
+    const res = await this.db.query(
+      `INSERT INTO devices (customer_id, manufacturer, model, serial_hash, uuid_hash, device_fingerprint)
+       VALUES ($1::uuid, $2, $3, $4, $5, $6)
+       RETURNING id, customer_id, manufacturer, model, serial_hash, uuid_hash, device_fingerprint,
+                 first_seen_at, last_seen_at`,
+      [
+        input.customerId,
+        input.manufacturer ?? null,
+        input.model ?? null,
+        input.serialHash ?? null,
+        input.uuidHash ?? null,
+        input.deviceFingerprint,
+      ],
+    );
+    return rowToDevice(res.rows[0]!);
+  }
+
+  async touchDevice(id: string): Promise<void> {
+    await this.db.query(`UPDATE devices SET last_seen_at = now() WHERE id = $1::uuid`, [id]);
+  }
+
+  async findActivationByLicense(licenseId: string): Promise<AgentActivationRecord | undefined> {
+    const res = await this.db.query(
+      `SELECT id, customer_id, license_id, device_id, agent_version, status, activated_at, last_seen_at
+       FROM agent_activations WHERE license_id = $1::uuid`,
+      [licenseId],
+    );
+    if (res.rowCount === 0) return undefined;
+    return rowToActivation(res.rows[0]!);
+  }
+
+  async findActivationByDevice(deviceId: string): Promise<AgentActivationRecord | undefined> {
+    const res = await this.db.query(
+      `SELECT id, customer_id, license_id, device_id, agent_version, status, activated_at, last_seen_at
+       FROM agent_activations WHERE device_id = $1::uuid ORDER BY activated_at DESC LIMIT 1`,
+      [deviceId],
+    );
+    if (res.rowCount === 0) return undefined;
+    return rowToActivation(res.rows[0]!);
+  }
+
+  async createAgentActivation(input: {
+    customerId: string;
+    licenseId: string;
+    deviceId: string;
+    agentVersion?: string | null;
+  }): Promise<AgentActivationRecord> {
+    const res = await this.db.query(
+      `INSERT INTO agent_activations (customer_id, license_id, device_id, agent_version)
+       VALUES ($1::uuid, $2::uuid, $3::uuid, $4)
+       RETURNING id, customer_id, license_id, device_id, agent_version, status, activated_at, last_seen_at`,
+      [input.customerId, input.licenseId, input.deviceId, input.agentVersion ?? null],
+    );
+    return rowToActivation(res.rows[0]!);
+  }
+
+  async updateActivationLastSeen(id: string): Promise<void> {
+    await this.db.query(`UPDATE agent_activations SET last_seen_at = now() WHERE id = $1::uuid`, [
+      id,
+    ]);
+  }
+
+  async createAuditLog(input: {
+    customerId?: string | null;
+    event: string;
+    metadata?: Record<string, unknown> | null;
+  }): Promise<AuditLogRecord> {
+    const res = await this.db.query(
+      `INSERT INTO audit_logs (customer_id, event, metadata)
+       VALUES ($1::uuid, $2, $3)
+       RETURNING id, customer_id, event, metadata, created_at`,
+      [input.customerId ?? null, input.event, input.metadata ? JSON.stringify(input.metadata) : null],
+    );
+    const row = res.rows[0]!;
+    return {
+      id: row.id,
+      customerId: row.customer_id,
+      event: row.event,
+      metadata: row.metadata,
+      createdAt: row.created_at.toISOString(),
+    };
   }
 }
 
