@@ -77,6 +77,7 @@ Preview locally with Vite: `npm run dev:web` (proxies `/api` → local Render).
 | Symptom | Fix |
 |---------|-----|
 | Build OK, deploy fails: `EBADENGINE` / wrangler requires `node >=22` | Set Cloudflare **Node version** to `22` (or env `NODE_VERSION=22`); retry deploy |
+| `.nvmrc` is `22` but logs show Node 20 | Dashboard **Build Variables** `NODE_VERSION=20` **overrides** `.nvmrc` — delete it or set `NODE_VERSION=22`, then retry |
 | Workspace / monorepo auto-detect error | Deploy with `-c apps/web/wrangler.jsonc` or `cd apps/web` |
 | `'tsc' is not recognized` | Run `npm install` from repo root before build |
 | `dist` missing on deploy | Run shared + web build before `wrangler deploy` |

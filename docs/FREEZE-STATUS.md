@@ -26,7 +26,7 @@
 
 **Hosting freeze (2026-08-12):** Operator web = **Cloudflare Workers + Wrangler** (`apps/web/wrangler.jsonc`). **Abandoned:** Netlify, Cloudflare Pages-only static deploy. API stays on **Render**; database stays on **Neon**.
 
-**Cloudflare Workers deploy (2026-08-12):** Build succeeds with Node 20; **deploy** needs **Node 22** (`NODE_VERSION=22` or dashboard Node version `22`) because Wrangler 4.x (`>=22`). Deploy command stays `npx wrangler deploy -c apps/web/wrangler.jsonc`.
+**Cloudflare Workers deploy (2026-08-12):** Repo root `engines.node` stays `>=20` (Render/CI). **Workers Builds + deploy** need **Node 22** — `.nvmrc` is `22`; set dashboard `NODE_VERSION=22` (or remove a stale `NODE_VERSION=20` override). Wrangler 4.x requires Node 22+ for `npx wrangler deploy -c apps/web/wrangler.jsonc`.
 
 ---
 
