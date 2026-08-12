@@ -5,10 +5,10 @@ export function SettingsPage() {
       <p className="lede">Tenant preferences, consent copy, and API endpoints.</p>
 
       <div className="panel hosting-note">
-        <strong>Production hosting (planned):</strong> Customer-facing CYVRA XCQC will be served from a{" "}
-        <strong>subdomain of cyvoriq.com</strong> (e.g. <code>xcqc.cyvoriq.com</code>). DNS is not
-        configured yet — this Worker remains on <code>*.workers.dev</code> until cutover.{" "}
-        <code>cyvoriq.in</code> integration is deferred.
+        <strong>Production hosting (planned):</strong> Public DevicePulse marketing at <code>/</code> and
+        operator console at <code>/app</code> on a <strong>subdomain of cyvoriq.com</strong> (e.g.{" "}
+        <code>devicepulse.cyvoriq.com</code>). DNS is not configured yet — this Worker remains on{" "}
+        <code>*.workers.dev</code> until cutover. <code>cyvoriq.in</code> integration is deferred.
       </div>
 
       <div className="panel">
@@ -16,7 +16,7 @@ export function SettingsPage() {
           <tbody>
             <tr>
               <th>Product</th>
-              <td>CYVRA XCQC</td>
+              <td>DevicePulse (operator console)</td>
             </tr>
             <tr>
               <th>Default profile</th>

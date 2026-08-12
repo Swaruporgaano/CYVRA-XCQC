@@ -13,7 +13,7 @@
 |---|----------|--------------|
 | F1 | ADJUST not redo | Keep Wave A+B, Plan 3 stack, session ingest |
 | F2 | Licensing critical path | Pause **new collectors** until L4 (activation E2E) |
-| F3 | Two web apps | `apps/web-portal` (customer) + `apps/web` (operator) |
+| F3 | Two web apps | `apps/web-portal` (customer) **deferred** — landing + `/app` operator on same Worker (`apps/web`) until L4 |
 | F4 | Neon customers model | Mobile-centric `customers` table (not tenant-only RBAC) |
 | F5 | Device binding | `SAME_DEVICE` policy on fingerprint change |
 | F6 | Named Pipe IPC | Required before production (H1) |
@@ -48,6 +48,7 @@
 | Neon store adapter | Done | `NeonSessionStore` with memory/file fallback |
 | L2 commercial auth API | Done | `/api/v1/auth/*`, JWT, OTP, Neon/memory store |
 | L2 customer auth web UI | Done | `/account/*` routes on `apps/web` Worker |
+| DevicePulse marketing landing | Done | `/` landing (light navy), `/app/*` operator (dark), legacy redirects |
 | L3 license lifecycle API | Done | `/api/v1/license/*`, device JWT ingest, `/account` licenses UI |
 | Doc review | Done | `DOC-REVIEW-FINDINGS.md`, Word doc extraction |
 | Gap bridge plan | Done | `GAP-BRIDGE-PLAN.md` (phased route P0 → R1) |
@@ -152,9 +153,8 @@
 
 ## NEXT (immediate)
 
-1. **Render** — Set `LICENSE_PEPPER`, `LICENSE_DEV_MODE=true` (with existing `JWT_SECRET`, `OTP_PEPPER`); redeploy API.
-2. **Cloudflare** — Rebuild Worker after push; test `/account` → issue key → authorize download.
-3. **L4** — Customer portal (`apps/web-portal`) or **L5** — Electron auth UI (per plan).
+1. **Cloudflare** — Rebuild Worker after push; test `/` landing + `/app` operator + `/account` license E2E.
+2. **L4** — Customer portal (`apps/web-portal`) or **L5** — Electron auth UI (per plan).
 
 ---
 
@@ -169,4 +169,4 @@ Do not skip step 1. L1 is forward-only; no drops of session tables.
 
 ---
 
-*Updated 2026-08-12 — L3 license lifecycle API + customer /account licenses UI.*
+*Updated 2026-08-12 — DevicePulse marketing landing at `/`, operator moved to `/app/*`.*
