@@ -224,7 +224,7 @@ export function LandingPage() {
             <Link to="/account/login" className="dp-btn dp-btn-ghost">
               Login
             </Link>
-            <Link to="/account/register" className="dp-btn dp-btn-primary">
+            <Link to="/account/register" className="dp-btn dp-btn-primary dp-btn-get">
               Get DevicePulse
             </Link>
           </div>
@@ -242,7 +242,7 @@ export function LandingPage() {
               understand device condition, performance and readiness.
             </p>
             <div className="dp-hero-ctas">
-              <Link to="/account/register" className="dp-btn dp-btn-primary">
+              <Link to="/account/register" className="dp-btn dp-btn-primary dp-btn-get">
                 Get DevicePulse
               </Link>
               <a href="#how-it-works" className="dp-btn dp-btn-outline-light">
@@ -533,7 +533,7 @@ export function LandingPage() {
         <h2>Know Your Device Before You Decide Its Future.</h2>
         <p>Assess. Understand. Report. Act.</p>
         <div className="dp-hero-ctas">
-          <Link to="/account/register" className="dp-btn dp-btn-primary">
+          <Link to="/account/register" className="dp-btn dp-btn-primary dp-btn-get">
             Get DevicePulse
           </Link>
           <Link to="/account/login" className="dp-btn dp-btn-outline-light">
