@@ -9,6 +9,10 @@ import { DevicesPage } from "./pages/Devices";
 import { ReportsPage } from "./pages/Reports";
 import { SettingsPage } from "./pages/Settings";
 import { OperatorPage } from "./pages/Operator";
+import { CustomerLoginPage } from "./pages/customer/Login";
+import { CustomerRegisterPage } from "./pages/customer/Register";
+import { CustomerVerifyPage } from "./pages/customer/VerifyOtp";
+import { CustomerAccountPage } from "./pages/customer/Account";
 
 const links = [
   ["/", "Dashboard"],
@@ -20,9 +24,10 @@ const links = [
   ["/licenses", "Licenses"],
   ["/reports", "Reports"],
   ["/settings", "Settings"],
+  ["/account", "Customer account"],
 ] as const;
 
-export function App() {
+function OperatorShell() {
   const { role, setRole } = useAuth();
 
   return (
@@ -63,5 +68,17 @@ export function App() {
         </Routes>
       </main>
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <Routes>
+      <Route path="/account/login" element={<CustomerLoginPage />} />
+      <Route path="/account/register" element={<CustomerRegisterPage />} />
+      <Route path="/account/verify" element={<CustomerVerifyPage />} />
+      <Route path="/account" element={<CustomerAccountPage />} />
+      <Route path="/*" element={<OperatorShell />} />
+    </Routes>
   );
 }

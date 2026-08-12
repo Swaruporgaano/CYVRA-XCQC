@@ -50,6 +50,12 @@ Set in the Cloudflare build environment (or locally before `npm run build -w @cy
 | `VITE_API_URL` | `https://YOUR-SERVICE.onrender.com` (Render API, **no** trailing slash) |
 | `VITE_INGEST_TOKEN` | Same as Render `XCQC_INGEST_TOKEN` (optional; only if browser calls ingest) |
 
+**L2 customer auth routes** (same Worker for now): `/account/register`, `/account/login`, `/account/verify`. Rebuild after `VITE_API_URL` changes.
+
+**Render CORS:** set `CORS_ORIGINS` to your Worker URL (e.g. `https://cyvra-xcqc.<account>.workers.dev`) plus future `https://*.cyvoriq.com` subdomain. Defaults cover `*.workers.dev` and `*.cyvoriq.com` if unset.
+
+**Planned production domain:** subdomain of **cyvoriq.com** (document only — no DNS in repo). `cyvoriq.in` deferred.
+
 `VITE_*` values are baked in at **build** time. After changing them, rebuild and redeploy.
 
 ## Worker name

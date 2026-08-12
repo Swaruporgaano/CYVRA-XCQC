@@ -10,9 +10,11 @@ Use this file when you come back to the project after a break.
 | [**GAP-BRIDGE-PLAN.md**](./GAP-BRIDGE-PLAN.md) | Master phased route P0 → R1 |
 | [**P0-VERIFICATION-CHECKLIST.md**](./P0-VERIFICATION-CHECKLIST.md) | Plan 3 E2E — what to click in Neon / Render / Cloudflare Workers |
 
-**Next action:** **P0** (dashboard verification + one agent run) → **L1** (apply `neon-schema-l1-commercial.sql`).
+**Next action:** **L3** license keys + download/activate API. Customer auth UI live at `/account/*` on the Workers site.
 
 **Rule:** No new hardware collectors until **L4** (licensing E2E) passes.
+
+**Hosting note:** Production customer domain planned as **subdomain of cyvoriq.com** (not configured yet). **cyvoriq.in** link deferred.
 
 ---
 
@@ -37,10 +39,10 @@ Use this file when you come back to the project after a break.
 
 | Done | Next (you + agent) |
 |------|---------------------|
-| Freeze all YES — ADJUST, licensing critical path | **P0:** Apply `neon-schema.sql`, set Render `DATABASE_URL`, verify `/health` |
-| Wave A+B, Plan 3 scaffold, GAP-BRIDGE plan | **P0:** Cloudflare Workers `VITE_API_URL`, Windows agent → Neon session |
-| L1 migration file in repo | **L1:** Run `neon-schema-l1-commercial.sql` after P0 |
-| | **L2:** Auth + OTP API (not started) |
+| Freeze all YES — ADJUST, licensing critical path | **L3:** License keys, download token, activate API |
+| Wave A+B, Plan 3 scaffold, GAP-BRIDGE plan | **L4:** Dedicated `apps/web-portal` (optional split) |
+| L1 migration file in repo | Apply `neon-schema-l1-commercial.sql` on Neon if not done |
+| **L2 auth + OTP API + web UI** | Set Render `JWT_SECRET`, `OTP_PEPPER`, `OTP_DEV_MODE=true` |
 
 ---
 

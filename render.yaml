@@ -28,5 +28,11 @@ services:
         sync: false
       - key: OTP_PEPPER
         sync: false
+      - key: OTP_DEV_MODE
+        value: "true"
+      - key: SMS_PROVIDER
+        value: console
+      - key: CORS_ORIGINS
+        sync: false
       - key: LICENSE_PEPPER
         sync: false

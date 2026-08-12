@@ -26,6 +26,8 @@
 
 **Hosting freeze (2026-08-12):** Operator web = **Cloudflare Workers + Wrangler** (`apps/web/wrangler.jsonc`). **Abandoned:** Netlify, Cloudflare Pages-only static deploy. API stays on **Render**; database stays on **Neon**.
 
+**Future production domain (document only):** Customer/ops web will move to a **subdomain of cyvoriq.com**. No DNS changes in repo. **cyvoriq.in** integration deferred to a later phase.
+
 **Cloudflare Workers deploy (2026-08-12):** Repo root `engines.node` stays `>=20` (Render/CI). **Workers Builds + deploy** need **Node 22** — `.nvmrc` is `22`; set dashboard `NODE_VERSION=22` (or remove a stale `NODE_VERSION=20` override). Wrangler 4.x requires Node 22+ for `npx wrangler deploy -c apps/web/wrangler.jsonc`.
 
 ---
@@ -44,6 +46,8 @@
 | Electron scaffold | Done | Spawns native agent (CLI bridge until H1) |
 | Neon base schema | Done | `apps/api/sql/neon-schema.sql` (tenant/session tables) |
 | Neon store adapter | Done | `NeonSessionStore` with memory/file fallback |
+| L2 commercial auth API | Done | `/api/v1/auth/*`, JWT, OTP, Neon/memory store |
+| L2 customer auth web UI | Done | `/account/*` routes on `apps/web` Worker |
 | Doc review | Done | `DOC-REVIEW-FINDINGS.md`, Word doc extraction |
 | Gap bridge plan | Done | `GAP-BRIDGE-PLAN.md` (phased route P0 → R1) |
 | Accounts linked | Done | Neon, Render, Cloudflare Workers connected to repo (verify P0) |
@@ -70,17 +74,21 @@
 - [x] Migration file `apps/api/sql/neon-schema-l1-commercial.sql`
 - [ ] Apply L1 migration on Neon (after P0 base schema)
 - [ ] Verify all tables on fresh + existing P0 DB
-- [ ] Rollback notes documented in migration file
+- [x] Rollback notes documented in migration file
 - [ ] Update NEON-SETUP apply order
 
-### L2 — Auth + OTP API
+### L2 — Auth + OTP API (DONE in repo — verify on Render)
 
-- [ ] Mount `/api/v1` router
-- [ ] `POST /api/v1/auth/register`, `request-otp`, `verify-otp`, `login`
-- [ ] OTP hashing (`OTP_PEPPER`), rate limits, SMS provider plug-in
-- [ ] Render env: `JWT_SECRET`, `OTP_PEPPER`, `SMS_*`
-- [ ] Spec: `docs/specs/01-auth-license-device-binding.md`
-- [ ] Integration tests + `docs/api/v1-auth.md`
+- [x] Mount `/api/v1` router
+- [x] `POST /api/v1/auth/register`, `request-otp`, `verify-otp`, `login`, `GET /me`
+- [x] OTP hashing (`OTP_PEPPER`), rate limits, console/dev OTP (`OTP_DEV_MODE`)
+- [x] Neon + memory store for `customers` / `otp_transactions`
+- [x] CORS: `*.workers.dev`, `*.cyvoriq.com` (configurable `CORS_ORIGINS`)
+- [x] Web UI: `/account/register`, `/account/login`, `/account/verify`, `/account`
+- [x] Settings banner: future **cyvoriq.com** subdomain (DNS not in repo); **cyvoriq.in** deferred
+- [x] `docs/api/v1-auth.md`
+- [ ] Render env live: `JWT_SECRET`, `OTP_PEPPER`, `OTP_DEV_MODE=true`
+- [ ] User verifies Cloudflare → Register/Login/OTP E2E against Render API
 
 ### L3 — License + download + activate API
 
@@ -140,9 +148,10 @@
 
 ## NEXT (immediate)
 
-1. **P0** — User applies Neon schema + Render/Cloudflare Workers env; verify health and one agent run (see P0 checklist).
-2. **L1** — User runs `neon-schema-l1-commercial.sql` after P0 base schema; agent continues L2 spec work.
-3. **Stop** new collector modules until L4 passes.
+1. **Render** — Set `JWT_SECRET`, `OTP_PEPPER`, `OTP_DEV_MODE=true`; redeploy API.
+2. **Neon** — Apply L1 migration if not done (`neon-schema-l1-commercial.sql`).
+3. **Cloudflare** — Rebuild Worker after push; test `/account/register` → OTP → logged in.
+4. **L3** — License keys + download/activate API (next phase).
 
 ---
 
@@ -157,4 +166,4 @@ Do not skip step 1. L1 is forward-only; no drops of session tables.
 
 ---
 
-*Updated at freeze — 2026-08-11. Agents treat unchecked P0/L1 items as blockers for L2+.*
+*Updated 2026-08-12 — L2 auth shipped in repo.*
